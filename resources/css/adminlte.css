@@ -1,0 +1,384 @@
+/*
+ * AdminLTE 4 stylesheet entry point.
+ *
+ * Published by `php artisan adminlte:install`. Add this file to your
+ * vite.config.js input array.
+ *
+ * Option A (default): import the prebuilt CSS — fastest, no SCSS toolchain.
+ */
+@import 'bootstrap-icons/font/bootstrap-icons.css';
+@import 'overlayscrollbars/overlayscrollbars.css';
+@import 'admin-lte/dist/css/adminlte.css';
+
+/*
+ * Theme polish for the custom hotel admin screens.
+ * Several redesigned modules use bespoke cards/tables, so these overrides let
+ * the AdminLTE color-mode switch affect those surfaces too.
+ */
+[data-bs-theme='dark'] body {
+  background-color: #111827 !important;
+}
+
+[data-bs-theme='dark'] .app-main,
+[data-bs-theme='dark'] .app-content,
+[data-bs-theme='dark'] .app-content-header {
+  background:
+    radial-gradient(circle at top left, rgba(91, 62, 174, 0.16), transparent 34rem),
+    linear-gradient(180deg, #111827 0%, #0f172a 100%) !important;
+}
+
+[data-bs-theme='dark'] :is(
+  .card,
+  .modal-content,
+  .dropdown-menu,
+  .users-table-card,
+  .users-stat-card,
+  .roles-table-card,
+  .roles-stat-card,
+  .permission-group-card,
+  .permission-check-card,
+  .announcements-table-card,
+  .announcements-stat-card,
+  .reports-workspace,
+  .reports-content-card,
+  .reports-kpi-card,
+  .cash-current-panel,
+  .cash-current-main,
+  .cash-stat-card,
+  .cash-history-card,
+  .settings-stat-card,
+  .settings-save-bar,
+  .settings-shell .card,
+  .media-config-card,
+  .announcement-form-banner,
+  .user-form-banner,
+  .role-form-banner
+) {
+  background-color: #172033 !important;
+  border-color: rgba(148, 163, 184, 0.22) !important;
+  color: #e5e7eb !important;
+  box-shadow: 0 1.5rem 3.5rem rgba(0, 0, 0, 0.22) !important;
+}
+
+[data-bs-theme='dark'] :is(
+  .card-header,
+  .modal-header,
+  .modal-footer,
+  .table thead th,
+  .users-table thead th,
+  .roles-table thead th,
+  .announcements-table thead th,
+  .reports-tabs-wrap,
+  .settings-shell .card-header
+) {
+  background-color: #111827 !important;
+  border-color: rgba(148, 163, 184, 0.22) !important;
+  color: #f8fafc !important;
+}
+
+[data-bs-theme='dark'] :is(
+  .text-dark,
+  .card-title,
+  .modal-title,
+  .users-section-head h3,
+  .roles-section-head h3,
+  .announcements-section-head h3,
+  .reports-section-head h3,
+  .cash-section-head h3,
+  .settings-section-head h3
+) {
+  color: #f8fafc !important;
+}
+
+[data-bs-theme='dark'] :is(.text-muted, .small, .form-text) {
+  color: #aab6ca !important;
+}
+
+[data-bs-theme='dark'] :is(
+  .form-control,
+  .form-select,
+  .input-group-text,
+  .select2-container--bootstrap-5 .select2-selection
+) {
+  background-color: #0f172a !important;
+  border-color: rgba(148, 163, 184, 0.3) !important;
+  color: #f8fafc !important;
+}
+
+[data-bs-theme='dark'] :is(.table, .table > :not(caption) > * > *) {
+  color: #e5e7eb !important;
+  background-color: transparent !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+[data-bs-theme='dark'] :is(.bg-white, .bg-light, .bg-body-tertiary) {
+  background-color: #172033 !important;
+  color: #e5e7eb !important;
+}
+
+[data-bs-theme='dark'] .dropdown-item {
+  color: #e5e7eb !important;
+}
+
+[data-bs-theme='dark'] .dropdown-item:hover,
+[data-bs-theme='dark'] .dropdown-item:focus,
+[data-bs-theme='dark'] .dropdown-item.active {
+  background-color: rgba(91, 62, 174, 0.24) !important;
+  color: #ffffff !important;
+}
+
+/*
+ * Navbar notifications: AdminLTE's default dropdown puts long messages, icon
+ * and time on the same line. These rules turn it into a readable mini inbox.
+ */
+.admin-notifications-menu .admin-notification-toggle {
+  position: relative;
+}
+
+.admin-notifications-menu .navbar-badge {
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 0.32rem;
+  border: 2px solid var(--bs-body-bg);
+  border-radius: 999px;
+  font-size: 0.68rem;
+  line-height: 0.9rem;
+}
+
+.admin-notifications-dropdown {
+  width: min(24rem, calc(100vw - 1.5rem));
+  max-width: calc(100vw - 1.5rem);
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 1rem;
+  box-shadow: 0 1.25rem 3rem rgba(15, 23, 42, 0.18);
+}
+
+.admin-notifications-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.95rem 1rem;
+  background:
+    radial-gradient(circle at top left, rgba(91, 62, 174, 0.16), transparent 12rem),
+    linear-gradient(135deg, rgba(248, 250, 252, 0.96), rgba(241, 245, 249, 0.96));
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.admin-notifications-title {
+  color: #0f172a;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-notifications-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.55rem;
+  border-radius: 999px;
+  background: #4c1d95;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.admin-notifications-list {
+  max-height: min(23rem, calc(100vh - 11rem));
+  overflow-y: auto;
+  padding: 0.35rem;
+}
+
+.admin-notification-item {
+  display: grid;
+  grid-template-columns: 2.35rem minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin: 0.25rem 0;
+  padding: 0.8rem !important;
+  border-radius: 0.85rem;
+  color: #1e293b;
+  white-space: normal;
+  transition: background-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.admin-notification-item:hover,
+.admin-notification-item:focus {
+  background: rgba(91, 62, 174, 0.08);
+  color: #111827;
+  transform: translateY(-1px);
+  box-shadow: inset 0 0 0 1px rgba(91, 62, 174, 0.08);
+}
+
+.admin-notification-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 0.85rem;
+  background: rgba(91, 62, 174, 0.12);
+  color: #4c1d95;
+  font-size: 1.05rem;
+}
+
+.admin-notification-body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.admin-notification-text {
+  display: block;
+  color: #0f172a;
+  font-size: 0.9rem;
+  font-weight: 650;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.admin-notification-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #64748b;
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+
+.admin-notification-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1.4rem 1rem !important;
+  color: #64748b !important;
+  white-space: normal;
+}
+
+.admin-notifications-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.85rem 1rem !important;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  background: #f8fafc;
+  color: #4c1d95 !important;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.admin-notifications-page .notification-row {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 1rem;
+}
+
+.admin-notifications-page .notification-row.unread {
+  background:
+    linear-gradient(90deg, rgba(91, 62, 174, 0.08), transparent 55%),
+    var(--bs-tertiary-bg);
+}
+
+.admin-notifications-page .notification-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 1rem;
+  background: rgba(91, 62, 174, 0.12);
+  color: #4c1d95;
+}
+
+.admin-notifications-page .notification-title,
+.admin-notifications-page .notification-message {
+  overflow-wrap: anywhere;
+}
+
+.admin-notifications-page .notification-actions {
+  display: flex;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+[data-bs-theme='dark'] .admin-notifications-dropdown {
+  border-color: rgba(148, 163, 184, 0.22);
+}
+
+[data-bs-theme='dark'] .admin-notifications-head {
+  background:
+    radial-gradient(circle at top left, rgba(139, 92, 246, 0.28), transparent 12rem),
+    linear-gradient(135deg, #172033, #111827);
+  border-bottom-color: rgba(148, 163, 184, 0.18);
+}
+
+[data-bs-theme='dark'] .admin-notifications-title,
+[data-bs-theme='dark'] .admin-notification-text {
+  color: #f8fafc;
+}
+
+[data-bs-theme='dark'] .admin-notification-item {
+  color: #e5e7eb;
+}
+
+[data-bs-theme='dark'] .admin-notification-item:hover,
+[data-bs-theme='dark'] .admin-notification-item:focus {
+  background: rgba(139, 92, 246, 0.18) !important;
+  color: #ffffff !important;
+}
+
+[data-bs-theme='dark'] .admin-notification-icon,
+[data-bs-theme='dark'] .admin-notifications-page .notification-icon {
+  background: rgba(139, 92, 246, 0.18);
+  color: #c4b5fd;
+}
+
+[data-bs-theme='dark'] .admin-notification-time,
+[data-bs-theme='dark'] .admin-notification-empty {
+  color: #aab6ca !important;
+}
+
+[data-bs-theme='dark'] .admin-notifications-footer {
+  border-top-color: rgba(148, 163, 184, 0.18);
+  background: #111827;
+  color: #c4b5fd !important;
+}
+
+@media (max-width: 575.98px) {
+  .admin-notifications-dropdown {
+    width: calc(100vw - 1rem);
+    margin-inline: 0.5rem;
+  }
+
+  .admin-notifications-page .notification-row {
+    grid-template-columns: 2.75rem minmax(0, 1fr);
+  }
+
+  .admin-notifications-page .notification-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+}
+
+/*
+ * Option B: compile from source to customise SCSS variables. Comment out
+ * the admin-lte CSS import above and use this instead (requires `sass`):
+ *
+ *   // resources/css/adminlte.scss
+ *   $primary: #6610f2;            // your overrides BEFORE the import
+ *   $lte-sidebar-width: 280px;
+ *   @import 'admin-lte/src/scss/adminlte';
+ *
+ * See https://adminlte.io/themes/v4/docs/customization.html
+ */

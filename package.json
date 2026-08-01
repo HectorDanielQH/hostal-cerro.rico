@@ -1,0 +1,38 @@
+{
+    "$schema": "https://www.schemastore.org/package.json",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "vite build",
+        "dev": "vite --host"
+    },
+    "devDependencies": {
+        "@popperjs/core": "2.11",
+        "@tailwindcss/vite": "^4.0.0",
+        "admin-lte": "4.0",
+        "apexcharts": "5.0",
+        "bootstrap": "5.3",
+        "bootstrap-icons": "1.13",
+        "concurrently": "^9.0.1",
+        "flatpickr": "4.6",
+        "fullcalendar": "6.1",
+        "jsvectormap": "1.7",
+        "laravel-vite-plugin": "^3.1",
+        "overlayscrollbars": "2.0",
+        "quill": "2.0",
+        "sass": "1.77",
+        "sortablejs": "1.15",
+        "tabulator-tables": "6.0",
+        "tailwindcss": "^4.0.0",
+        "tom-select": "2.4",
+        "vite": "^8.0.0"
+    },
+    "dependencies": {
+        "@fortawesome/fontawesome-free": "^7.3.0",
+        "datatables.net": "^2.3.8",
+        "datatables.net-bs5": "^2.3.8",
+        "jquery": "^3.7.1",
+        "select2": "^4.1.0",
+        "sweetalert2": "^11.26.25"
+    }
+}
