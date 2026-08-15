@@ -53,6 +53,11 @@ class UpdatePaymentRequest extends FormRequest
             $ledger = app(ReservationLedgerService::class);
             $currency = $hotelSetting->normalizeCurrency((string) $this->input('currency'));
             $amountBase = $ledger->paymentAmountForReservationBalance($reservation, (float) $this->input('amount', 0), $currency);
+            $lockedCurrency = $ledger->lockedPaymentCurrency($reservation, $payment);
+
+            if ($lockedCurrency && $lockedCurrency !== $currency) {
+                $validator->errors()->add('currency', 'Esta reserva ya tiene pagos en '.$lockedCurrency.'. Los siguientes pagos deben registrarse en la misma moneda.');
+            }
 
             if (! $ledger->supportsCurrency($reservation, $currency)) {
                 $validator->errors()->add('currency', 'La reserva seleccionada no tiene precio configurado para '.$currency.'.');
@@ -88,7 +93,7 @@ class UpdatePaymentRequest extends FormRequest
                     $reservation->status === Reservation::STATUS_CHECKED_OUT
                     && $paidAfterEdit < round((float) $reservation->total_amount, 2)
                 ) {
-                    $validator->errors()->add('amount', 'No puedes dejar una reserva con check-out con saldo pendiente.');
+                    $validator->errors()->add('amount', 'No puedes dejar una reserva con salida registrada y saldo pendiente.');
                 }
             }
 

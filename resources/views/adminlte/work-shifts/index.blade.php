@@ -94,7 +94,7 @@
                             </div>
                             <div class="col-12">
                                 <label class="form-label" for="shift-description">Descripcion / notas</label>
-                                <textarea class="form-control" id="shift-description" name="description" rows="3" placeholder="Ej. Responsable de check-in, llamadas y caja de recepcion."></textarea>
+                                <textarea class="form-control" id="shift-description" name="description" rows="3" placeholder="Ej. Responsable de entradas, llamadas y caja de recepcion."></textarea>
                             </div>
                             <div class="col-12">
                                 <div class="form-check form-switch">

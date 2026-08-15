@@ -4,6 +4,7 @@ namespace App\Services\Notifications;
 
 use App\Models\Reservation;
 use App\Models\User;
+use App\Notifications\AdminLteDemoNotification;
 use App\Notifications\NewReservationNotification;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
@@ -22,6 +23,30 @@ class ReservationNotificationService
         }
 
         Notification::send($staff, new NewReservationNotification($reservation));
+    }
+
+    public function customerCancelledReservation(Reservation $reservation): void
+    {
+        $staff = $this->reservationRecipients();
+
+        if ($staff->isEmpty()) {
+            return;
+        }
+
+        $reservation->loadMissing(['customer', 'room', 'roomType']);
+
+        $customerName = $reservation->customer?->full_name ?: 'Cliente sin nombre';
+        $roomLabel = $reservation->room?->number
+            ? 'Hab. '.$reservation->room->number
+            : ($reservation->roomType?->name ?: 'Habitacion por revisar');
+        $checkIn = $reservation->check_in?->format('d/m/Y') ?: 'fecha por definir';
+
+        Notification::send($staff, new AdminLteDemoNotification(
+            title: 'Cliente solicito anulacion',
+            message: sprintf('%s anulo la reserva %s de %s para entrada %s. Revisar politica y devolucion si corresponde.', $customerName, $reservation->code, $roomLabel, $checkIn),
+            icon: 'bi bi-calendar-x-fill text-danger',
+            url: route('adminlte.front-desk.index'),
+        ));
     }
 
     /**

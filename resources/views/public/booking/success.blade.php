@@ -34,7 +34,6 @@
                                     <span class="promo-badge">{{ __('public.booking_success.status_pending') }}</span>
                                 </p>
                             </div>
-                            <div class="price-chip">{{ 'Bs. '.number_format((float) $reservation->total_amount, 2, '.', '') }}</div>
                         </div>
 
                         <div class="booking-summary-grid">
@@ -43,16 +42,11 @@
                             <div><strong>{{ __('public.booking_success.dates') }}</strong><span>{{ __('public.booking_success.date_range', ['from' => optional($reservation->check_in)->format('d/m/Y'), 'to' => optional($reservation->check_out)->format('d/m/Y')]) }}</span></div>
                             <div><strong>{{ __('public.booking_success.nights') }}</strong><span>{{ __('public.booking_success.nights_count', ['count' => $reservation->nights]) }}</span></div>
                             <div><strong>{{ __('public.booking_success.payment_method') }}</strong><span>{{ $paymentMethodLabel }}</span></div>
-                            <div><strong>{{ __('public.booking_success.total_estimated') }}</strong><span>Bs. {{ number_format((float) $reservation->total_amount, 2, '.', '') }}</span></div>
-                            <div><strong>{{ __('public.booking_success.required_deposit') }}</strong><span>{{ $reservation->deposit_percentage }}% - Bs. {{ number_format((float) $reservation->deposit_amount_required, 2, '.', '') }}</span></div>
-                            <div><strong>{{ __('public.booking_success.balance_pending') }}</strong><span>Bs. {{ number_format((float) $reservation->balance_amount, 2, '.', '') }}</span></div>
+                            <div><strong>{{ __('public.booking_success.required_deposit') }}</strong><span>{{ $reservation->deposit_percentage }}%</span></div>
                         </div>
 
                         <div class="booking-inline-alert mt-4">
-                            {{ __('public.booking_success.deposit_notice', [
-                                'percentage' => $reservation->deposit_percentage,
-                                'amount' => 'Bs. '.number_format((float) $reservation->deposit_amount_required, 2, '.', ''),
-                            ]) }}
+                            Tu comprobante fue enviado. El hotel revisara la informacion y te contactara para confirmar la reserva.
                         </div>
 
                         <div class="hero-actions mt-4">

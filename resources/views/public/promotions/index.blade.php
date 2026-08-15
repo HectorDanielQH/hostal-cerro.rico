@@ -24,6 +24,11 @@
                         $whatsAppUrl = $whatsapp !== ''
                             ? 'https://wa.me/'.$whatsapp.'?text='.rawurlencode('Hola, quiero consultar la promocion '.$promotion->name.' en '.$hotelSetting->hotel_name.'.')
                             : null;
+                        $publicPromotionDescription = preg_replace(
+                            '/(?:Bs\.?\s*\d+(?:[.,]\d+)?|\$us\s*\d+(?:[.,]\d+)?)/i',
+                            'descuento especial',
+                            (string) ($promotion->description ?: __('public.promotions.fallback_description'))
+                        );
                     @endphp
                     <div class="col-lg-6" data-reveal>
                         <article class="public-card promotion-list-card">
@@ -34,10 +39,10 @@
                                         <h2>{{ $promotion->name }}</h2>
                                     </div>
                                     <span class="price-chip">
-                                        {{ $promotion->discount_type === 'percentage' ? rtrim(rtrim(number_format((float) $promotion->discount_value, 2, '.', ''), '0'), '.').'%' : 'Bs. '.number_format((float) $promotion->discount_value, 2, '.', '') }}
+                                        {{ $promotion->discount_type === 'percentage' ? rtrim(rtrim(number_format((float) $promotion->discount_value, 2, '.', ''), '0'), '.').'%' : 'Descuento directo' }}
                                     </span>
                                 </div>
-                                <p>{{ $promotion->description ?: __('public.promotions.fallback_description') }}</p>
+                                <p>{{ $publicPromotionDescription }}</p>
                                 <div class="promotion-dates mb-3">
                                     {{ __('public.promotions.validity') }}: {{ $promotion->starts_at ? $promotion->starts_at->format('d/m/Y') : __('public.promotions.immediate') }} -
                                     {{ $promotion->ends_at ? $promotion->ends_at->format('d/m/Y') : __('public.promotions.no_limit') }}

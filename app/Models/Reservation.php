@@ -68,6 +68,8 @@ class Reservation extends Model
         'cancelled_at',
         'expired_at',
         'cancellation_reason',
+        'cancellation_reviewed_at',
+        'cancellation_reviewed_by',
         'created_by',
         'updated_by',
     ];
@@ -94,6 +96,7 @@ class Reservation extends Model
             'checked_out_at' => 'datetime',
             'cancelled_at' => 'datetime',
             'expired_at' => 'datetime',
+            'cancellation_reviewed_at' => 'datetime',
         ];
     }
 
@@ -127,9 +130,19 @@ class Reservation extends Model
         return $this->belongsTo(User::class, 'updated_by');
     }
 
+    public function cancellationReviewedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancellation_reviewed_by');
+    }
+
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function guests(): HasMany
+    {
+        return $this->hasMany(ReservationGuest::class);
     }
 
     public function isActive(): bool

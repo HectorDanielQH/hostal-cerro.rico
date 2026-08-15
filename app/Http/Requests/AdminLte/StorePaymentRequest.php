@@ -65,6 +65,11 @@ class StorePaymentRequest extends FormRequest
             $ledger = app(ReservationLedgerService::class);
             $currency = $hotelSetting->normalizeCurrency((string) $this->input('currency'));
             $amountBase = $ledger->paymentAmountForReservationBalance($reservation, (float) $this->input('amount', 0), $currency);
+            $lockedCurrency = $ledger->lockedPaymentCurrency($reservation);
+
+            if ($lockedCurrency && $lockedCurrency !== $currency) {
+                $validator->errors()->add('currency', 'Esta reserva ya tiene pagos en '.$lockedCurrency.'. Los siguientes pagos deben registrarse en la misma moneda.');
+            }
 
             if (! $ledger->supportsCurrency($reservation, $currency)) {
                 $validator->errors()->add('currency', 'La reserva seleccionada no tiene precio configurado para '.$currency.'.');

@@ -42,15 +42,22 @@ class BookingController extends Controller
             ->get()
             ->map(fn (RoomType $roomType) => $this->appendPublicRoomTypeMeta($roomType));
 
-        $selectedRoomTypeId = $roomTypes->contains('id', (int) $request->query('room_type_id'))
-            ? (int) $request->query('room_type_id')
-            : null;
+        $selectedRoom = Room::query()
+            ->where('is_active', true)
+            ->where('status', 'available')
+            ->where('id', (int) $request->query('room_id'))
+            ->first(['id', 'room_type_id']);
+        $selectedRoomTypeId = $selectedRoom?->room_type_id
+            ?: ($roomTypes->contains('id', (int) $request->query('room_type_id'))
+                ? (int) $request->query('room_type_id')
+                : null);
 
         return view('public.booking.create', [
             'hotelSetting' => $hotelSetting,
             'paymentMethods' => $this->publicPaymentMethods($hotelSetting),
             'roomTypes' => $roomTypes,
             'selectedRoomTypeId' => old('room_type_id', $selectedRoomTypeId),
+            'selectedRoomId' => old('room_id', $selectedRoom?->id),
             'title' => __('public.meta.booking_title', ['hotel' => $hotelSetting->hotel_name]),
             'metaDescription' => __('public.meta.booking_description', [
                 'hotel' => $hotelSetting->hotel_name,
@@ -92,7 +99,8 @@ class BookingController extends Controller
 
         $availableRoomTypes = $roomTypes
             ->map(function (RoomType $roomType) use ($checkIn, $checkOut, $adults, $children): ?array {
-                $availableRoomsCount = $this->availableRoomsQuery($roomType, $checkIn, $checkOut)->count();
+                $availableRooms = $this->availableRoomsQuery($roomType, $checkIn, $checkOut)->get();
+                $availableRoomsCount = $availableRooms->count();
 
                 if ($availableRoomsCount < 1) {
                     return null;
@@ -110,9 +118,20 @@ class BookingController extends Controller
                     'deposit_amount_required_formatted' => $quote['deposit_amount_required_formatted'],
                     'base_price' => (float) $roomType->base_price,
                     'base_price_formatted' => $this->formatMoney((float) $roomType->base_price),
+                    'base_price_usd_formatted' => $this->formatMoney((float) ($roomType->price_usd ?? 0), 'USD'),
                     'price_bob' => (float) ($roomType->price_bob ?? $roomType->base_price),
                     'price_usd' => (float) ($roomType->price_usd ?? 0),
                     'available_rooms_count' => $availableRoomsCount,
+                    'rooms' => $availableRooms->map(fn (Room $room): array => [
+                        'id' => $room->id,
+                        'number' => $room->number,
+                        'floor' => $room->floor,
+                        'description' => $room->description,
+                        'gallery_images' => collect($room->publicGalleryImages())
+                            ->map(fn (string $image): string => asset('storage/'.$image))
+                            ->values()
+                            ->all(),
+                    ])->values(),
                     'max_guests' => (int) $roomType->max_guests,
                     'capacity_summary' => __('public.booking.capacity_summary', [
                         'adults' => $adults,
@@ -125,14 +144,30 @@ class BookingController extends Controller
                         'discount_label' => $quote['discount_label'],
                         'final_price' => $quote['price_per_night'],
                         'final_price_formatted' => $quote['price_per_night_formatted'],
+                        'final_price_usd_formatted' => $quote['price_per_night_usd_formatted'],
                     ] : null,
                 ];
             })
             ->filter()
             ->values();
+        $availableRooms = $availableRoomTypes
+            ->flatMap(fn (array $roomType): array => collect($roomType['rooms'])
+                ->map(fn (array $room): array => [
+                    ...$room,
+                    'room_type_id' => $roomType['id'],
+                    'room_type_name' => $roomType['name'],
+                    'deposit_percentage' => $roomType['deposit_percentage'],
+                    'available_rooms_count' => $roomType['available_rooms_count'],
+                    'max_guests' => $roomType['max_guests'],
+                    'capacity_summary' => $roomType['capacity_summary'],
+                    'promotion' => $roomType['promotion'],
+                ])
+                ->all())
+            ->values();
 
         return response()->json([
-            'available' => $availableRoomTypes->isNotEmpty(),
+            'available' => $availableRooms->isNotEmpty(),
+            'rooms' => $availableRooms,
             'room_types' => $availableRoomTypes,
         ]);
     }
@@ -148,6 +183,7 @@ class BookingController extends Controller
             'adults' => ['required', 'integer', 'min:1', 'max:20'],
             'children' => ['nullable', 'integer', 'min:0', 'max:20'],
             'promotion_id' => ['nullable', 'exists:promotions,id'],
+            'room_id' => ['required', 'exists:rooms,id'],
         ]);
 
         $roomType = RoomType::query()
@@ -165,7 +201,7 @@ class BookingController extends Controller
             ]);
         }
 
-        if (! $this->findAvailableRoom($roomType, $checkIn, $checkOut)) {
+        if (! $this->findAvailableRoom($roomType, $checkIn, $checkOut, $validated['room_id'] ?? null)) {
             throw ValidationException::withMessages([
                 'room_type_id' => __('public.messages.no_rooms_selected_range'),
             ]);
@@ -184,6 +220,12 @@ class BookingController extends Controller
             'discount_label' => $quote['discount_label'],
             'discount_amount' => $quote['discount_amount'],
             'discount_amount_formatted' => $quote['discount_amount_formatted'],
+            'discount_total_amount' => $quote['discount_total_amount'],
+            'discount_total_amount_formatted' => $quote['discount_total_amount_formatted'],
+            'discount_total_amount_bob' => $quote['discount_total_amount_bob'],
+            'discount_total_amount_bob_formatted' => $quote['discount_total_amount_bob_formatted'],
+            'discount_total_amount_usd' => $quote['discount_total_amount_usd'],
+            'discount_total_amount_usd_formatted' => $quote['discount_total_amount_usd_formatted'],
             'price_per_night' => $quote['price_per_night'],
             'price_per_night_formatted' => $quote['price_per_night_formatted'],
             'total_amount' => $quote['total_amount'],
@@ -220,7 +262,7 @@ class BookingController extends Controller
 
             $checkIn = Carbon::parse($validated['check_in']);
             $checkOut = Carbon::parse($validated['check_out']);
-            $room = $this->findAvailableRoom($roomType, $checkIn, $checkOut);
+            $room = $this->findAvailableRoom($roomType, $checkIn, $checkOut, $validated['room_id'] ?? null);
 
             if (! $room) {
                 throw ValidationException::withMessages([
@@ -244,6 +286,7 @@ class BookingController extends Controller
             $maximumAmount = $paymentCurrency === 'USD'
                 ? (float) $quote['total_amount_usd']
                 : (float) $quote['total_amount_bob'];
+            $paymentMethodLabel = $this->preferredPaymentMethodLabel((string) $validated['preferred_payment_method']);
 
             if ($paymentCurrency === 'USD' && (! $quote['supports_usd'] || $requiredAmount <= 0 || $maximumAmount <= 0)) {
                 throw ValidationException::withMessages([
@@ -311,7 +354,7 @@ class BookingController extends Controller
                 'receipt_image' => $this->storeReceiptImage($request),
                 'notes' => sprintf(
                     'Comprobante enviado desde reserva web. Preferencia: %s. Moneda declarada: %s. Equivalencia usada segun precios registrados del tipo de habitacion: 1 USD = Bs. %s.',
-                    $validated['preferred_payment_method'],
+                    $paymentMethodLabel,
                     $paymentCurrency,
                     number_format($priceEquivalenceRate, 4, '.', '')
                 ),
@@ -358,14 +401,7 @@ class BookingController extends Controller
 
         return view('public.booking.success', [
             'hotelSetting' => $hotelSetting,
-            'paymentMethodLabel' => match ($reservation->preferred_payment_method) {
-                'qr' => __('public.portal_detail.payment_methods.qr'),
-                'bank_transfer' => __('public.messages.payment_bank_transfer_label'),
-                'bank_deposit' => __('public.messages.payment_bank_deposit_label'),
-                'bank' => __('public.messages.payment_bank_label'),
-                'other' => __('public.messages.payment_other'),
-                default => __('public.messages.payment_other'),
-            },
+            'paymentMethodLabel' => $this->preferredPaymentMethodLabel((string) $reservation->preferred_payment_method),
             'reservation' => $reservation,
             'portalUrl' => $this->signedPortalUrl($reservation),
             'title' => __('public.meta.booking_success_title', ['hotel' => $hotelSetting->hotel_name]),
@@ -412,12 +448,18 @@ class BookingController extends Controller
         return [
             [
                 'value' => 'qr',
-                'label' => 'Depositar por QR',
+                'label' => 'QR de billetera digital',
                 'description' => __('public.messages.payment_qr_description'),
-                'icon' => 'bi-qr-code',
+                'icon' => 'bi-phone',
                 'available' => filled($hotelSetting->digital_wallet_qr_image)
-                    || filled($hotelSetting->bank_qr_image)
                     || filled($hotelSetting->payment_qr_image),
+            ],
+            [
+                'value' => 'bank_qr',
+                'label' => 'QR banco local',
+                'description' => 'Pagare escaneando el QR bancario local del hotel y luego subire mi comprobante.',
+                'icon' => 'bi-qr-code',
+                'available' => filled($hotelSetting->bank_qr_image),
             ],
             [
                 'value' => 'bank_transfer',
@@ -526,6 +568,8 @@ class BookingController extends Controller
 
         $totalAmount = round($pricePerNight * $nights, 2);
         $totalAmountUsd = round($pricePerNightUsd * $nights, 2);
+        $discountTotalAmount = round($discountAmount * $nights, 2);
+        $discountTotalAmountUsd = round($discountAmountUsd * $nights, 2);
         $depositPercentage = $roomType->reservationDepositPercentage();
         $depositAmountRequired = round(($totalAmount * $depositPercentage) / 100, 2);
         $depositAmountRequiredUsd = round(($totalAmountUsd * $depositPercentage) / 100, 2);
@@ -545,6 +589,12 @@ class BookingController extends Controller
             'discount_amount_formatted' => $this->formatMoney($discountAmount),
             'discount_amount_usd' => $discountAmountUsd,
             'discount_amount_usd_formatted' => $this->formatMoney($discountAmountUsd, 'USD'),
+            'discount_total_amount' => $discountTotalAmount,
+            'discount_total_amount_formatted' => $this->formatMoney($discountTotalAmount),
+            'discount_total_amount_bob' => $discountTotalAmount,
+            'discount_total_amount_bob_formatted' => $this->formatMoney($discountTotalAmount),
+            'discount_total_amount_usd' => $discountTotalAmountUsd,
+            'discount_total_amount_usd_formatted' => $this->formatMoney($discountTotalAmountUsd, 'USD'),
             'price_per_night' => $pricePerNight,
             'price_per_night_formatted' => $this->formatMoney($pricePerNight),
             'price_per_night_usd' => $pricePerNightUsd,
@@ -574,9 +624,11 @@ class BookingController extends Controller
         ];
     }
 
-    private function findAvailableRoom(RoomType $roomType, Carbon $checkIn, Carbon $checkOut): ?Room
+    private function findAvailableRoom(RoomType $roomType, Carbon $checkIn, Carbon $checkOut, int|string|null $roomId = null): ?Room
     {
-        return $this->availableRoomsQuery($roomType, $checkIn, $checkOut)->first();
+        return $this->availableRoomsQuery($roomType, $checkIn, $checkOut)
+            ->when($roomId, fn ($query) => $query->where('id', (int) $roomId))
+            ->first();
     }
 
     private function availableRoomsQuery(RoomType $roomType, Carbon $checkIn, Carbon $checkOut)
@@ -584,6 +636,7 @@ class BookingController extends Controller
         return Room::query()
             ->where('room_type_id', $roomType->id)
             ->where('is_active', true)
+            ->where('status', 'available')
             ->whereDoesntHave('reservations', function ($query) use ($checkIn, $checkOut): void {
                 $query->whereIn('status', Reservation::ACTIVE_STATUSES)
                     ->where('check_in', '<', $checkOut->toDateString())
@@ -696,9 +749,22 @@ class BookingController extends Controller
     private function paymentMethodForLedger(string $preferredMethod): string
     {
         return match ($preferredMethod) {
-            'qr' => 'qr',
+            'qr', 'bank_qr' => 'qr',
             'bank_transfer', 'bank_deposit', 'bank' => 'bank',
             default => 'other',
+        };
+    }
+
+    private function preferredPaymentMethodLabel(string $preferredMethod): string
+    {
+        return match ($preferredMethod) {
+            'qr' => 'QR de billetera digital',
+            'bank_qr' => 'QR banco local',
+            'bank_transfer' => __('public.messages.payment_bank_transfer_label'),
+            'bank_deposit' => __('public.messages.payment_bank_deposit_label'),
+            'bank' => __('public.messages.payment_bank_label'),
+            'other' => __('public.messages.payment_other'),
+            default => __('public.messages.payment_other'),
         };
     }
 
@@ -711,10 +777,11 @@ class BookingController extends Controller
 
     private function isForeign(array $validated): bool
     {
-        $country = Str::lower(trim((string) ($validated['country'] ?? '')));
         $nationality = Str::lower(trim((string) ($validated['nationality'] ?? '')));
 
-        return ($country !== '' && $country !== 'bolivia')
-            || ($nationality !== '' && $nationality !== 'boliviana' && $nationality !== 'boliviano' && $nationality !== 'bolivia');
+        return $nationality !== ''
+            && $nationality !== 'boliviana'
+            && $nationality !== 'boliviano'
+            && $nationality !== 'bolivia';
     }
 }

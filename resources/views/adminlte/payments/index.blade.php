@@ -743,6 +743,8 @@
                                     data-reservation-paid="${row.reservation_paid_raw}"
                                     data-reservation-balance="${row.reservation_balance_raw}"
                                     data-reservation-supports-usd="${row.reservation_supports_usd ? '1' : '0'}"
+                                    data-reservation-display-currency="${row.reservation_display_currency || row.currency_raw || baseCurrency}"
+                                    data-reservation-locked-payment-currency="${row.reservation_locked_payment_currency || row.currency_raw || ''}"
                                     data-reservation-total-usd="${row.reservation_total_usd_raw || 0}"
                                     data-reservation-paid-usd="${row.reservation_paid_usd_raw || 0}"
                                     data-reservation-balance-usd="${row.reservation_balance_usd_raw || 0}"
@@ -892,6 +894,7 @@
                 document.getElementById('payment_date').value = '{{ now()->toDateString() }}';
                 amountInput.value = '';
                 currencySelect.value = baseCurrency;
+                currencySelect.disabled = false;
                 summaryCard.innerHTML = `
                     <div class="fw-semibold mb-2">Resumen de reserva</div>
                     <div class="text-muted mb-0">Selecciona una reserva para ver el total, pagado y saldo pendiente.</div>
@@ -931,6 +934,8 @@
                     total_amount_usd: Number(dataset.reservationTotalUsd || 0),
                     paid_amount_usd: Number(dataset.reservationPaidUsd || 0),
                     balance_amount_usd: Number(dataset.reservationBalanceUsd || 0),
+                    display_currency: dataset.reservationDisplayCurrency || dataset.currency || baseCurrency,
+                    locked_payment_currency: dataset.reservationLockedPaymentCurrency || dataset.currency || null,
                 };
                 if (reservationPayload.id) {
                     reservationsMap.set(String(reservationPayload.id), reservationPayload);
@@ -939,6 +944,7 @@
                 reservationSelect.disabled = true;
                 amountInput.value = Number(dataset.amount || 0).toFixed(2);
                 currencySelect.value = dataset.currency || baseCurrency;
+                currencySelect.disabled = Boolean(reservationPayload.locked_payment_currency);
                 paymentMethodSelect.value = dataset.paymentMethod || '';
                 document.getElementById('payment_date').value = dataset.paymentDate || '';
                 referenceInput.value = dataset.referenceNumber || '';
@@ -1069,9 +1075,11 @@
                         <div class="fw-semibold mb-2">Resumen de reserva</div>
                         <div class="text-muted mb-0">Selecciona una reserva para ver el total, pagado y saldo pendiente.</div>
                     `;
+                    currencySelect.disabled = false;
                     return;
                 }
 
+                applyReservationCurrencyLock(reservation);
                 const isEditing = Boolean(document.getElementById('editing-payment-id').value);
                 if (!isEditing && !amountInput.value) {
                     amountInput.value = getReservationAmount(reservation, 'balance_amount', currencySelect.value || baseCurrency).toFixed(2);
@@ -1095,6 +1103,22 @@
                 `;
 
                 updateConversionSummary();
+            }
+
+            function applyReservationCurrencyLock(reservation) {
+                const lockedCurrency = reservation.locked_payment_currency || null;
+                const displayCurrency = reservation.display_currency || lockedCurrency || baseCurrency;
+
+                if (lockedCurrency) {
+                    currencySelect.value = displayCurrency;
+                    currencySelect.disabled = true;
+                    return;
+                }
+
+                currencySelect.disabled = false;
+                if (!currencySelect.value) {
+                    currencySelect.value = displayCurrency;
+                }
             }
 
             function toggleRecommendedPaymentFields() {
@@ -1175,6 +1199,7 @@
 
             async function submitPaymentForm() {
                 const formData = new FormData(createForm);
+                formData.set('currency', currencySelect.value || baseCurrency);
 
                 const response = await fetch(createForm.action, {
                     method: 'POST',

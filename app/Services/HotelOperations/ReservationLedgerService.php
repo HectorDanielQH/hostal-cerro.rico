@@ -18,7 +18,7 @@ class ReservationLedgerService
         }
 
         if ($currency !== 'USD') {
-            return 0.0;
+            return HotelSetting::current()->convertToBase($amount, $currency);
         }
 
         $rate = $this->reservationUsdToBobRate($reservation);
@@ -59,6 +59,53 @@ class ReservationLedgerService
         }
 
         return true;
+    }
+
+    public function lockedPaymentCurrency(Reservation $reservation, ?Payment $exceptPayment = null): ?string
+    {
+        $reservation->loadMissing('payments');
+
+        $payment = $reservation->payments
+            ->reject(fn (Payment $payment): bool => $exceptPayment && $payment->id === $exceptPayment->id)
+            ->whereIn('status', [Payment::STATUS_PENDING, Payment::STATUS_CONFIRMED])
+            ->sortBy('id')
+            ->first();
+
+        return $payment ? strtoupper(trim((string) ($payment->currency ?: 'BOB'))) : null;
+    }
+
+    public function ensurePaymentCurrencyMatchesReservation(Reservation $reservation, ?string $currency, ?Payment $exceptPayment = null): void
+    {
+        $currency = strtoupper(trim((string) ($currency ?: 'BOB')));
+        $lockedCurrency = $this->lockedPaymentCurrency($reservation, $exceptPayment);
+
+        if ($lockedCurrency && $lockedCurrency !== $currency) {
+            abort(422, 'Esta reserva ya tiene pagos en '.$lockedCurrency.'. Los siguientes pagos deben registrarse en la misma moneda.');
+        }
+    }
+
+    public function displayCurrency(Reservation $reservation): string
+    {
+        $currency = $this->lockedPaymentCurrency($reservation) ?: 'BOB';
+
+        if ($currency === 'USD' && $this->supportsCurrency($reservation, 'USD')) {
+            return 'USD';
+        }
+
+        return 'BOB';
+    }
+
+    public function amountFromBaseForDisplay(Reservation $reservation, float $amountInBase, ?string $currency = null): float
+    {
+        $currency = strtoupper(trim((string) ($currency ?: $this->displayCurrency($reservation))));
+
+        if ($currency !== 'USD') {
+            return round($amountInBase, 2);
+        }
+
+        $rate = $this->reservationUsdToBobRate($reservation);
+
+        return $rate > 0 ? round($amountInBase / $rate, 2) : 0.0;
     }
 
     public function syncReservationAmounts(Reservation $reservation): void

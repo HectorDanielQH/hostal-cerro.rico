@@ -65,6 +65,7 @@
                 <thead>
                     <tr>
                         <th>Habitacion</th>
+                        <th>Fotos</th>
                         <th>Tipo</th>
                         <th>Precios</th>
                         <th>Capacidad</th>
@@ -352,6 +353,41 @@
             gap: 0.75rem;
         }
 
+        .room-gallery-stack {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+        }
+
+        .room-gallery-thumb {
+            width: 3.35rem;
+            height: 3.35rem;
+            overflow: hidden;
+            border: 2px solid #fff;
+            border-radius: 1rem;
+            background: #eef2f7;
+            box-shadow: 0 0.65rem 1.35rem rgba(17, 24, 39, 0.12);
+        }
+
+        .room-gallery-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .room-gallery-more {
+            width: 2.2rem;
+            height: 2.2rem;
+            border-radius: 999px;
+            color: #173d67;
+            background: #eaf2ff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.78rem;
+            font-weight: 900;
+        }
+
         .room-number-icon {
             width: 3rem;
             height: 3rem;
@@ -492,6 +528,31 @@
             border-radius: 0.85rem;
         }
 
+        .room-gallery-preview {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+            gap: 0.7rem;
+        }
+
+        .room-gallery-preview__empty {
+            grid-column: 1 / -1;
+            padding: 1rem;
+            border: 1px dashed rgba(36, 95, 157, 0.35);
+            border-radius: 1rem;
+            color: #6b7280;
+            background: rgba(36, 95, 157, 0.04);
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .room-gallery-preview img {
+            width: 100%;
+            height: 92px;
+            object-fit: cover;
+            border-radius: 1rem;
+            box-shadow: 0 0.75rem 1.4rem rgba(17, 24, 39, 0.12);
+        }
+
         .room-switch-card {
             min-height: 92px;
             padding: 0.95rem;
@@ -573,7 +634,7 @@
                 language: {
                     url: 'https://cdn.datatables.net/plug-ins/1.13.8/i18n/es-ES.json',
                 },
-                order: [[6, 'desc']],
+                order: [[7, 'desc']],
                 columns: [
                     {
                         data: 'number',
@@ -588,6 +649,27 @@
                                 <span class="room-number-icon"><i class="bi bi-door-open"></i></span>
                                 <div><span class="room-number-title">Habitacion ${row.number}</span><span class="room-muted">${floor}</span></div>
                             </div>`;
+                        }
+                    },
+                    {
+                        data: 'gallery_image_urls',
+                        name: 'gallery_images',
+                        orderable: false,
+                        searchable: false,
+                        render: (data, type, row) => {
+                            if (type !== 'display') {
+                                return row.gallery_images_count || 0;
+                            }
+
+                            const images = Array.isArray(data) ? data : [];
+
+                            if (!images.length) {
+                                return '<span class="room-muted">Sin fotos propias</span>';
+                            }
+
+                            const first = images[0];
+                            const more = images.length > 1 ? `<span class="room-gallery-more">+${images.length - 1}</span>` : '';
+                            return `<div class="room-gallery-stack"><span class="room-gallery-thumb"><img src="${first}" alt="Habitacion ${row.number}"></span>${more}</div>`;
                         }
                     },
                     {
@@ -724,12 +806,40 @@
                 editForm.querySelector('[name="internal_notes"]').value = room.internal_notes ?? '';
                 editForm.querySelector('[name="status"]').value = room.status ?? 'available';
                 editForm.querySelector('[name="is_active"]').checked = !!room.is_active;
+                editForm.querySelector('[name="clear_gallery_images"]').checked = false;
+                renderGalleryPreview('edit', room.gallery_image_urls || []);
             }
 
             function resetForm(form) {
                 form.reset();
                 form.querySelector('[name="status"]').value = 'available';
                 form.querySelector('[name="is_active"]').checked = true;
+                form.querySelector('[name="clear_gallery_images"]') && (form.querySelector('[name="clear_gallery_images"]').checked = false);
+                const prefix = form.id.startsWith('edit') ? 'edit' : 'create';
+                renderGalleryPreview(prefix, []);
+            }
+
+            document.querySelectorAll('[data-room-gallery-input]').forEach((input) => {
+                input.addEventListener('change', () => {
+                    const prefix = input.dataset.roomGalleryInput;
+                    const urls = Array.from(input.files || []).slice(0, 8).map((file) => URL.createObjectURL(file));
+                    renderGalleryPreview(prefix, urls);
+                });
+            });
+
+            function renderGalleryPreview(prefix, urls) {
+                const preview = document.querySelector(`[data-room-gallery-preview="${prefix}"]`);
+
+                if (!preview) {
+                    return;
+                }
+
+                if (!urls.length) {
+                    preview.innerHTML = '<div class="room-gallery-preview__empty">Aun no hay fotos seleccionadas.</div>';
+                    return;
+                }
+
+                preview.innerHTML = urls.slice(0, 8).map((url) => `<img src="${url}" alt="Foto de habitacion">`).join('');
             }
 
             async function submitRoomForm(form, url, modalInstance, useMethodOverride) {

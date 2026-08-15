@@ -83,6 +83,31 @@
     <div class="col-lg-6">
         <div class="room-form-section">
             <div class="room-form-section__title">
+                <i class="bi bi-images" aria-hidden="true"></i>
+                Fotos de esta habitacion
+            </div>
+
+            <label class="form-label" for="{{ $prefix }}-room-gallery-images">Galeria propia</label>
+            <input type="file" class="form-control" id="{{ $prefix }}-room-gallery-images" name="gallery_images[]" accept="image/jpeg,image/png,image/webp" multiple data-room-gallery-input="{{ $prefix }}">
+            <div class="form-text">Puedes subir de 1 a 8 fotos. Recomendado: frente, cama, bano y vista general.</div>
+
+            @if ($prefix === 'edit')
+                <div class="form-check mt-3">
+                    <input type="hidden" name="clear_gallery_images" value="0">
+                    <input class="form-check-input" type="checkbox" id="{{ $prefix }}-room-clear-gallery-images" name="clear_gallery_images" value="1">
+                    <label class="form-check-label" for="{{ $prefix }}-room-clear-gallery-images">Eliminar fotos actuales si no subo nuevas</label>
+                </div>
+            @endif
+
+            <div class="room-gallery-preview mt-3" data-room-gallery-preview="{{ $prefix }}">
+                <div class="room-gallery-preview__empty">Aun no hay fotos seleccionadas.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="room-form-section">
+            <div class="room-form-section__title">
                 <i class="bi bi-lock" aria-hidden="true"></i>
                 Notas internas
             </div>

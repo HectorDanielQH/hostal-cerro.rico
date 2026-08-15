@@ -33,7 +33,7 @@
         $whatsAppUrl = $whatsapp !== ''
             ? 'https://wa.me/'.$whatsapp.'?text='.rawurlencode('Hola, quiero consultar mi reserva en '.($hotelSetting->hotel_name ?: 'Hostal Cerro Rico').'. Mi codigo es '.$reservation->code.'.')
             : null;
-        $canCancel = $reservation->status === 'pending';
+        $canCancel = $reservation->canBeCancelled();
     @endphp
 
     <section class="page-hero-simple">
@@ -118,6 +118,11 @@
                                 'percentage' => $reservation->deposit_percentage,
                                 'amount' => $hotelSetting->formatMoney((float) $reservation->deposit_amount_required, $baseCurrency),
                             ]) }}
+                        </div>
+
+                        <div class="booking-inline-alert mt-3 border-warning-subtle bg-warning-subtle text-dark">
+                            <strong class="d-block mb-1">{{ __('public.portal_detail.cancellation_policy_title') }}</strong>
+                            {{ __('public.portal_detail.cancellation_policy_text') }}
                         </div>
                     </div>
 

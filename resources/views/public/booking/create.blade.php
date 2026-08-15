@@ -17,8 +17,8 @@
         $walletQrUrl = $walletQrPath ? asset('storage/'.$walletQrPath) : null;
         $bankQrUrl = $hotelSetting->bank_qr_image ? asset('storage/'.$hotelSetting->bank_qr_image) : null;
         $paymentQrUrl = $walletQrUrl ?: $bankQrUrl;
-        $bobQrUrl = $bankQrUrl ?: $walletQrUrl;
-        $usdQrUrl = $walletQrUrl ?: $bankQrUrl;
+        $digitalWalletQrUrl = $walletQrUrl;
+        $localBankQrUrl = $bankQrUrl;
         $bankConfigured = filled($hotelSetting->bank_name) || filled($hotelSetting->bank_account_holder) || filled($hotelSetting->bank_account_number);
         $bookingAvailableCountTemplate = __('public.booking.available_count', ['count' => '__COUNT__']);
         $bookingMaxGuestsTemplate = __('public.booking.max_guests', ['count' => '__COUNT__']);
@@ -54,8 +54,73 @@
             ['name' => 'Australia', 'code' => 'AU'],
             ['name' => 'Nueva Zelanda', 'code' => 'NZ'],
         ];
-        $selectedCountry = old('country', 'Bolivia');
-        $selectedCountryExists = collect($countries)->contains('name', $selectedCountry);
+        $dialCodes = [
+            ['label' => 'Bolivia', 'flag' => '🇧🇴', 'code' => '+591'],
+            ['label' => 'Argentina', 'flag' => '🇦🇷', 'code' => '+54'],
+            ['label' => 'Brasil', 'flag' => '🇧🇷', 'code' => '+55'],
+            ['label' => 'Chile', 'flag' => '🇨🇱', 'code' => '+56'],
+            ['label' => 'Colombia', 'flag' => '🇨🇴', 'code' => '+57'],
+            ['label' => 'Ecuador', 'flag' => '🇪🇨', 'code' => '+593'],
+            ['label' => 'Paraguay', 'flag' => '🇵🇾', 'code' => '+595'],
+            ['label' => 'Peru', 'flag' => '🇵🇪', 'code' => '+51'],
+            ['label' => 'Uruguay', 'flag' => '🇺🇾', 'code' => '+598'],
+            ['label' => 'Venezuela', 'flag' => '🇻🇪', 'code' => '+58'],
+            ['label' => 'Mexico', 'flag' => '🇲🇽', 'code' => '+52'],
+            ['label' => 'Estados Unidos', 'flag' => '🇺🇸', 'code' => '+1'],
+            ['label' => 'Canada', 'flag' => '🇨🇦', 'code' => '+1'],
+            ['label' => 'Espana', 'flag' => '🇪🇸', 'code' => '+34'],
+            ['label' => 'Francia', 'flag' => '🇫🇷', 'code' => '+33'],
+            ['label' => 'Alemania', 'flag' => '🇩🇪', 'code' => '+49'],
+            ['label' => 'Italia', 'flag' => '🇮🇹', 'code' => '+39'],
+            ['label' => 'Portugal', 'flag' => '🇵🇹', 'code' => '+351'],
+            ['label' => 'Reino Unido', 'flag' => '🇬🇧', 'code' => '+44'],
+            ['label' => 'Paises Bajos', 'flag' => '🇳🇱', 'code' => '+31'],
+            ['label' => 'Suiza', 'flag' => '🇨🇭', 'code' => '+41'],
+            ['label' => 'China', 'flag' => '🇨🇳', 'code' => '+86'],
+            ['label' => 'Japon', 'flag' => '🇯🇵', 'code' => '+81'],
+            ['label' => 'Corea del Sur', 'flag' => '🇰🇷', 'code' => '+82'],
+            ['label' => 'Australia', 'flag' => '🇦🇺', 'code' => '+61'],
+            ['label' => 'Nueva Zelanda', 'flag' => '🇳🇿', 'code' => '+64'],
+        ];
+        $dialCodes = [
+            ['label' => 'Bolivia', 'country_code' => 'BO', 'code' => '+591'],
+            ['label' => 'Argentina', 'country_code' => 'AR', 'code' => '+54'],
+            ['label' => 'Brasil', 'country_code' => 'BR', 'code' => '+55'],
+            ['label' => 'Chile', 'country_code' => 'CL', 'code' => '+56'],
+            ['label' => 'Colombia', 'country_code' => 'CO', 'code' => '+57'],
+            ['label' => 'Ecuador', 'country_code' => 'EC', 'code' => '+593'],
+            ['label' => 'Paraguay', 'country_code' => 'PY', 'code' => '+595'],
+            ['label' => 'Peru', 'country_code' => 'PE', 'code' => '+51'],
+            ['label' => 'Uruguay', 'country_code' => 'UY', 'code' => '+598'],
+            ['label' => 'Venezuela', 'country_code' => 'VE', 'code' => '+58'],
+            ['label' => 'Mexico', 'country_code' => 'MX', 'code' => '+52'],
+            ['label' => 'Estados Unidos', 'country_code' => 'US', 'code' => '+1'],
+            ['label' => 'Canada', 'country_code' => 'CA', 'code' => '+1'],
+            ['label' => 'Espana', 'country_code' => 'ES', 'code' => '+34'],
+            ['label' => 'Francia', 'country_code' => 'FR', 'code' => '+33'],
+            ['label' => 'Alemania', 'country_code' => 'DE', 'code' => '+49'],
+            ['label' => 'Italia', 'country_code' => 'IT', 'code' => '+39'],
+            ['label' => 'Portugal', 'country_code' => 'PT', 'code' => '+351'],
+            ['label' => 'Reino Unido', 'country_code' => 'GB', 'code' => '+44'],
+            ['label' => 'Paises Bajos', 'country_code' => 'NL', 'code' => '+31'],
+            ['label' => 'Suiza', 'country_code' => 'CH', 'code' => '+41'],
+            ['label' => 'China', 'country_code' => 'CN', 'code' => '+86'],
+            ['label' => 'Japon', 'country_code' => 'JP', 'code' => '+81'],
+            ['label' => 'Corea del Sur', 'country_code' => 'KR', 'code' => '+82'],
+            ['label' => 'Australia', 'country_code' => 'AU', 'code' => '+61'],
+            ['label' => 'Nueva Zelanda', 'country_code' => 'NZ', 'code' => '+64'],
+        ];
+        $selectedNationality = old('nationality', 'Bolivia');
+        $selectedNationalityExists = collect($countries)->contains('name', $selectedNationality);
+        $selectedCity = old('city', $hotelSetting->city ?: 'Potosi');
+        $oldWhatsapp = old('whatsapp', '');
+        $selectedWhatsappCode = '+591';
+        $selectedWhatsappNumber = $oldWhatsapp;
+
+        if (preg_match('/^(\+\d{1,4})\s*(.*)$/', trim((string) $oldWhatsapp), $whatsappParts) === 1) {
+            $selectedWhatsappCode = $whatsappParts[1];
+            $selectedWhatsappNumber = trim($whatsappParts[2]);
+        }
     @endphp
 
     <section class="page-hero-simple page-hero-booking-atg">
@@ -170,6 +235,8 @@
                 <div class="col-xl-8">
                     <form method="POST" action="{{ route('public.booking.store') }}" class="booking-form booking-wizard-form" id="public-booking-form" enctype="multipart/form-data" novalidate>
                         @csrf
+                        <input type="hidden" id="booking-room-id" name="room_id" value="{{ $selectedRoomId ?? '' }}">
+                        <input type="hidden" id="booking-visitor-location" name="visitor_location" value="{{ old('visitor_location') }}">
 
                         <div class="booking-step-panel is-active" data-booking-step data-step-index="0" data-step-label="{{ __('public.booking.step1') }}">
                             <div class="booking-step-head">
@@ -215,24 +282,21 @@
                                     @enderror
                                 </div>
                                 <div class="booking-step-grid-wide">
-                                    <label class="form-label" for="booking-room-type">{{ __('public.booking.prefer_room') }} <span class="text-muted">(opcional)</span></label>
-                                    <select id="booking-room-type" name="room_type_id" class="form-select @error('room_type_id') is-invalid @enderror">
-                                        <option value="">Ver todas las habitaciones disponibles</option>
+                                    <div class="booking-inline-alert">
+                                        En el siguiente paso veras habitaciones reales disponibles. Elige la habitacion exacta que quieres solicitar.
+                                    </div>
+                                    <select id="booking-room-type" name="room_type_id" class="d-none @error('room_type_id') is-invalid @enderror" aria-hidden="true" tabindex="-1">
+                                        <option value="">Habitacion pendiente</option>
                                         @foreach ($roomTypes as $roomType)
-                                            <option
-                                                value="{{ $roomType->id }}"
-                                                data-name="{{ $roomType->name }}"
-                                                data-base-price="{{ number_format((float) $roomType->base_price, 2, '.', '') }}"
-                                                @selected((int) old('room_type_id', $selectedRoomTypeId) === $roomType->id)
-                                            >
-                                                {{ $roomType->name }} - Bs. {{ number_format((float) ($roomType->price_bob ?? $roomType->base_price), 2, '.', '') }} / $us {{ number_format((float) ($roomType->price_usd ?? 0), 2, '.', '') }}
-                                            </option>
+                                            <option value="{{ $roomType->id }}" data-name="{{ $roomType->name }}" @selected((int) old('room_type_id', $selectedRoomTypeId) === $roomType->id)>{{ $roomType->name }}</option>
                                         @endforeach
                                     </select>
                                     @error('room_type_id')
-                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
                                     @enderror
-                                    <div class="booking-field-help">Si no sabes que elegir, deja esta opcion en blanco. El sistema consultara la base de datos y te mostrara solo habitaciones realmente libres.</div>
+                                    @error('room_id')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
                                 </div>
                             </div>
 
@@ -316,10 +380,32 @@
                                 </div>
                                 <div>
                                     <label class="form-label" for="nationality">{{ __('public.booking.nationality_label') }}</label>
-                                    <input type="text" id="nationality" name="nationality" value="{{ old('nationality') }}" class="form-control @error('nationality') is-invalid @enderror">
+                                    <select id="nationality" name="nationality" class="form-select public-country-select @error('nationality') is-invalid @enderror" data-country-select data-country-api="https://cdn.simplelocalize.io/public/v1/countries" data-selected-country="{{ $selectedNationality }}" data-placeholder="Selecciona tu nacionalidad">
+                                        @unless ($selectedNationalityExists)
+                                            <option value="{{ $selectedNationality }}" selected>{{ $selectedNationality }}</option>
+                                        @endunless
+                                        @foreach ($countries as $country)
+                                            <option value="{{ $country['name'] }}" data-country-code="{{ $country['code'] }}" data-country-flag="https://flagcdn.com/w40/{{ strtolower($country['code']) }}.png" @selected($selectedNationality === $country['name'])>
+                                                {{ $country['name'] }}
+                                            </option>
+                                        @endforeach
+                                    </select>
                                     @error('nationality')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
+                                    <div class="booking-field-help">Selecciona tu nacionalidad con la bandera para que el sistema te muestre la forma de pago correcta.</div>
+                                </div>
+                                <div>
+                                    <label class="form-label" for="city">{{ __('public.booking.city_label') }}</label>
+                                    <select id="city" name="city" class="form-select public-city-select @error('city') is-invalid @enderror" data-city-select data-city-api="https://countriesnow.space/api/v0.1/countries/cities" data-country-source="#nationality" data-selected-city="{{ $selectedCity }}" data-placeholder="Selecciona tu ciudad">
+                                        @if ($selectedCity)
+                                            <option value="{{ $selectedCity }}" selected>{{ $selectedCity }}</option>
+                                        @endif
+                                    </select>
+                                    @error('city')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                    <div class="booking-field-help">Primero selecciona tu nacionalidad; luego busca tu ciudad en la lista.</div>
                                 </div>
                                 <div>
                                     <label class="form-label" for="phone">{{ __('public.booking.phone_label') }}</label>
@@ -330,7 +416,23 @@
                                 </div>
                                 <div>
                                     <label class="form-label" for="whatsapp">{{ __('public.contact.whatsapp') }}</label>
-                                    <input type="text" id="whatsapp" name="whatsapp" value="{{ old('whatsapp') }}" class="form-control @error('whatsapp') is-invalid @enderror">
+                                    <input type="hidden" id="whatsapp" name="whatsapp" value="{{ old('whatsapp') }}">
+                                    <div class="input-group">
+                                        <select id="whatsapp-code" class="form-select public-whatsapp-code-select @error('whatsapp') is-invalid @enderror" data-whatsapp-code-select aria-label="Codigo de pais para WhatsApp">
+                                            @foreach ($dialCodes as $dialCode)
+                                                <option
+                                                    value="{{ $dialCode['code'] }}"
+                                                    title="{{ $dialCode['label'] }}"
+                                                    data-country-code="{{ $dialCode['country_code'] }}"
+                                                    data-country-flag="https://flagcdn.com/w40/{{ strtolower($dialCode['country_code']) }}.png"
+                                                    @selected($selectedWhatsappCode === $dialCode['code'])
+                                                >
+                                                    {{ $dialCode['code'] }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        <input type="text" id="whatsapp-number" value="{{ $selectedWhatsappNumber }}" class="form-control @error('whatsapp') is-invalid @enderror" placeholder="Numero de celular" inputmode="tel">
+                                    </div>
                                     @error('whatsapp')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -339,30 +441,6 @@
                                     <label class="form-label" for="email">{{ __('public.booking.email_label') }}</label>
                                     <input type="email" id="email" name="email" value="{{ old('email') }}" class="form-control @error('email') is-invalid @enderror">
                                     @error('email')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                                <div>
-                                    <label class="form-label" for="country">{{ __('public.booking.country_label') }}</label>
-                                    <select id="country" name="country" class="form-select public-country-select @error('country') is-invalid @enderror" data-country-select data-country-api="https://cdn.simplelocalize.io/public/v1/countries" data-selected-country="{{ $selectedCountry }}" data-placeholder="Selecciona tu pais">
-                                        @unless ($selectedCountryExists)
-                                            <option value="{{ $selectedCountry }}" selected>{{ $selectedCountry }}</option>
-                                        @endunless
-                                        @foreach ($countries as $country)
-                                            <option value="{{ $country['name'] }}" data-country-code="{{ $country['code'] }}" data-country-flag="https://flagcdn.com/w40/{{ strtolower($country['code']) }}.png" @selected($selectedCountry === $country['name'])>
-                                                {{ $country['name'] }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    @error('country')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                    <div class="booking-field-help">Busca tu pais por nombre y verifica la bandera antes de continuar.</div>
-                                </div>
-                                <div>
-                                    <label class="form-label" for="city">{{ __('public.booking.city_label') }}</label>
-                                    <input type="text" id="city" name="city" value="{{ old('city', $hotelSetting->city) }}" class="form-control @error('city') is-invalid @enderror">
-                                    @error('city')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
@@ -398,12 +476,12 @@
                                 <div class="booking-payment-gateway-head">
                                     <span class="section-kicker">{{ __('public.booking.payment_kicker') }}</span>
                                     <strong>Elige como quieres depositar</strong>
-                                    <small>Puedes elegir depositar por QR, por transferencia bancaria o por deposito bancario.</small>
+                                    <small id="booking-payment-routing-help">El sistema mostrara las opciones correctas segun tu ubicacion y nacionalidad.</small>
                                 </div>
 
                                 <div class="booking-payment-options booking-payment-options-wide">
                                     @foreach ($paymentMethods as $paymentMethod)
-                                        <label class="booking-payment-card @unless($paymentMethod['available']) is-disabled @endunless" for="preferred-payment-{{ $paymentMethod['value'] }}">
+                                        <label class="booking-payment-card @unless($paymentMethod['available']) is-disabled @endunless" for="preferred-payment-{{ $paymentMethod['value'] }}" data-payment-method-card data-payment-method="{{ $paymentMethod['value'] }}" data-configured="{{ $paymentMethod['available'] ? 'true' : 'false' }}">
                                             <input
                                                 class="form-check-input"
                                                 type="radio"
@@ -436,91 +514,90 @@
                                     <div class="invalid-feedback d-block">{{ $message }}</div>
                                 @enderror
 
-                                <div class="booking-payment-path mt-3">
-                                    <div class="booking-payment-path-step">
-                                        <span>1</span>
-                                        <strong>Elige como depositaras</strong>
-                                        <small>Selecciona QR, transferencia o deposito bancario.</small>
-                                    </div>
-                                    <div class="booking-payment-path-step">
-                                        <span>2</span>
-                                        <strong>Elige la moneda</strong>
-                                        <small>Indica si pagaras en bolivianos o dolares antes de ver los datos.</small>
-                                    </div>
-                                    <div class="booking-payment-path-step">
-                                        <span>3</span>
-                                        <strong>Deposita y sube tu voucher</strong>
-                                        <small>Veras el monto minimo, el total y donde depositar.</small>
-                                    </div>
-                                </div>
-
-                                <div class="booking-currency-choice mt-3">
-                                    <div>
-                                        <span class="section-kicker">Moneda del deposito</span>
-                                        <h3>En que moneda haras el pago?</h3>
-                                        <p>Elige la misma moneda que aparecera en tu comprobante. El sistema usara los precios registrados para esta habitacion.</p>
-                                    </div>
-                                    <div class="booking-currency-select-wrap">
-                                        <span>Moneda</span>
-                                        <select id="booking-payment-currency" name="payment_currency" class="form-select @error('payment_currency') is-invalid @enderror" required aria-label="Selecciona la moneda del deposito">
-                                            <option value="BOB" @selected(old('payment_currency', $hotelSetting->baseCurrency()) === 'BOB')>Bs. Bolivianos</option>
-                                            <option value="USD" @selected(old('payment_currency', $hotelSetting->baseCurrency()) === 'USD')>$us Dolares</option>
-                                        </select>
-                                        <i class="bi bi-chevron-down" aria-hidden="true"></i>
-                                    </div>
-                                </div>
+                                <input type="hidden" id="booking-payment-currency" name="payment_currency" value="{{ old('payment_currency', $selectedPaymentCurrency) }}" required>
                                 @error('payment_currency')
                                     <div class="invalid-feedback d-block">{{ $message }}</div>
                                 @enderror
 
+                                <div class="booking-payment-attraction-card booking-payment-attraction-card-compact mt-3">
+                                    <div class="booking-payment-attraction-main">
+                                        <span id="booking-attraction-percentage">Anticipo minimo</span>
+                                        <strong id="booking-attraction-minimum">-</strong>
+                                        <small id="booking-attraction-currency" data-selected-currency-label>Bs. Bolivianos</small>
+                                    </div>
+                                    <div class="booking-payment-attraction-grid">
+                                        <div>
+                                            <span id="booking-attraction-total-label">Total de tu estadia</span>
+                                            <strong id="booking-attraction-total">-</strong>
+                                        </div>
+                                        <div>
+                                            <span>Promocion</span>
+                                            <strong id="booking-attraction-discount">Sin promocion</strong>
+                                        </div>
+                                    </div>
+                                    <p id="booking-payment-attraction-copy" class="booking-payment-attraction-copy">
+                                        Elige una habitacion y aqui veras cuanto debes depositar para enviar tu solicitud.
+                                    </p>
+                                </div>
+
                                 <div class="booking-payment-guide-stack mt-3">
                                     <div class="booking-payment-guide @if ($selectedPaymentMethod !== 'qr') d-none @endif" data-booking-payment-guide="qr">
                                         <div>
-                                            <span class="section-kicker">QR del hotel</span>
-                                            <h3>Escanea este QR y sube tu comprobante</h3>
-                                            <p>Deposita en <strong data-selected-currency-label>Bs. Bolivianos</strong>. Abre el QR que prefieras y guarda la captura del pago.</p>
+                                            <span class="section-kicker">QR de billetera digital</span>
+                                            <h3>Escanea el QR digital y sube tu comprobante</h3>
+                                            <p>Esta opcion se muestra para visitantes fuera de Bolivia o clientes extranjeros. Deposita en <strong data-selected-currency-label>Bs. Bolivianos</strong> y guarda la captura del pago.</p>
                                         </div>
-                                        @if ($paymentQrUrl)
+                                        @if ($digitalWalletQrUrl)
                                             <div class="booking-qr-grid booking-qr-grid-single">
-                                                @if ($bobQrUrl)
-                                                    <div class="booking-qr-panel @if ($selectedPaymentCurrency !== 'BOB') d-none @endif" data-qr-currency-panel="BOB">
-                                                        <strong>QR para Bs. Bolivianos</strong>
-                                                        <small>Usa este QR solo si tu comprobante sera en bolivianos.</small>
-                                                        <button type="button" class="booking-qr-preview" data-open-qr-modal data-qr-src="{{ $bobQrUrl }}" data-qr-title="QR para Bs. Bolivianos" aria-label="Ampliar QR para bolivianos">
-                                                            <img src="{{ $bobQrUrl }}" alt="QR del hotel para pagos en bolivianos" class="booking-payment-qr">
-                                                            <span><i class="bi bi-arrows-fullscreen" aria-hidden="true"></i> Ampliar QR</span>
+                                                <div class="booking-qr-panel" data-qr-currency-panel="ANY">
+                                                    <strong>QR de billetera digital</strong>
+                                                    <small>Usa este QR para pagos digitales, especialmente si estas fuera de Bolivia.</small>
+                                                    <button type="button" class="booking-qr-preview" data-open-qr-modal data-qr-src="{{ $digitalWalletQrUrl }}" data-qr-title="QR de billetera digital" aria-label="Ampliar QR de billetera digital">
+                                                        <img src="{{ $digitalWalletQrUrl }}" alt="QR de billetera digital del hotel" class="booking-payment-qr">
+                                                        <span><i class="bi bi-arrows-fullscreen" aria-hidden="true"></i> Ampliar QR</span>
+                                                    </button>
+                                                    <div class="booking-qr-actions">
+                                                        <a href="{{ $digitalWalletQrUrl }}" class="btn btn-public-primary btn-sm" download>
+                                                            <i class="bi bi-download" aria-hidden="true"></i> Descargar
+                                                        </a>
+                                                        <button type="button" class="btn btn-public-outline btn-sm" data-open-qr-modal data-qr-src="{{ $digitalWalletQrUrl }}" data-qr-title="QR de billetera digital">
+                                                            <i class="bi bi-search" aria-hidden="true"></i> Ver grande
                                                         </button>
-                                                        <div class="booking-qr-actions">
-                                                            <a href="{{ $bobQrUrl }}" class="btn btn-public-primary btn-sm" download>
-                                                                <i class="bi bi-download" aria-hidden="true"></i> Descargar
-                                                            </a>
-                                                            <button type="button" class="btn btn-public-outline btn-sm" data-open-qr-modal data-qr-src="{{ $bobQrUrl }}" data-qr-title="QR para Bs. Bolivianos">
-                                                                <i class="bi bi-search" aria-hidden="true"></i> Ver grande
-                                                            </button>
-                                                        </div>
                                                     </div>
-                                                @endif
-                                                @if ($usdQrUrl)
-                                                    <div class="booking-qr-panel @if ($selectedPaymentCurrency !== 'USD') d-none @endif" data-qr-currency-panel="USD">
-                                                        <strong>QR para $us Dolares</strong>
-                                                        <small>Usa este QR solo si tu comprobante sera en dolares.</small>
-                                                        <button type="button" class="booking-qr-preview" data-open-qr-modal data-qr-src="{{ $usdQrUrl }}" data-qr-title="QR para $us Dolares" aria-label="Ampliar QR para dolares">
-                                                            <img src="{{ $usdQrUrl }}" alt="QR del hotel para pagos en dolares" class="booking-payment-qr">
-                                                            <span><i class="bi bi-arrows-fullscreen" aria-hidden="true"></i> Ampliar QR</span>
-                                                        </button>
-                                                        <div class="booking-qr-actions">
-                                                            <a href="{{ $usdQrUrl }}" class="btn btn-public-primary btn-sm" download>
-                                                                <i class="bi bi-download" aria-hidden="true"></i> Descargar
-                                                            </a>
-                                                            <button type="button" class="btn btn-public-outline btn-sm" data-open-qr-modal data-qr-src="{{ $usdQrUrl }}" data-qr-title="QR para $us Dolares">
-                                                                <i class="bi bi-search" aria-hidden="true"></i> Ver grande
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                @endif
+                                                </div>
                                             </div>
                                         @else
-                                            <div class="booking-payment-missing">El QR aun no esta configurado.</div>
+                                            <div class="booking-payment-missing">El QR de billetera digital aun no esta configurado.</div>
+                                        @endif
+                                    </div>
+
+                                    <div class="booking-payment-guide @if ($selectedPaymentMethod !== 'bank_qr') d-none @endif" data-booking-payment-guide="bank_qr">
+                                        <div>
+                                            <span class="section-kicker">QR banco local</span>
+                                            <h3>Escanea el QR bancario del hotel</h3>
+                                            <p>Esta opcion se muestra para clientes bolivianos ubicados en Bolivia. Deposita en <strong data-selected-currency-label>Bs. Bolivianos</strong> y sube tu comprobante.</p>
+                                        </div>
+                                        @if ($localBankQrUrl)
+                                            <div class="booking-qr-grid booking-qr-grid-single">
+                                                <div class="booking-qr-panel" data-qr-currency-panel="BOB">
+                                                    <strong>QR banco local</strong>
+                                                    <small>Usa este QR solo para pagos bancarios locales en Bolivia.</small>
+                                                    <button type="button" class="booking-qr-preview" data-open-qr-modal data-qr-src="{{ $localBankQrUrl }}" data-qr-title="QR banco local" aria-label="Ampliar QR banco local">
+                                                        <img src="{{ $localBankQrUrl }}" alt="QR banco local del hotel" class="booking-payment-qr">
+                                                        <span><i class="bi bi-arrows-fullscreen" aria-hidden="true"></i> Ampliar QR</span>
+                                                    </button>
+                                                    <div class="booking-qr-actions">
+                                                        <a href="{{ $localBankQrUrl }}" class="btn btn-public-primary btn-sm" download>
+                                                            <i class="bi bi-download" aria-hidden="true"></i> Descargar
+                                                        </a>
+                                                        <button type="button" class="btn btn-public-outline btn-sm" data-open-qr-modal data-qr-src="{{ $localBankQrUrl }}" data-qr-title="QR banco local">
+                                                            <i class="bi bi-search" aria-hidden="true"></i> Ver grande
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @else
+                                            <div class="booking-payment-missing">El QR banco local aun no esta configurado.</div>
                                         @endif
                                     </div>
 
@@ -552,49 +629,7 @@
                                 </div>
 
                                 <div class="booking-receipt-uploader mt-3">
-                                    <div class="booking-receipt-head">
-                                        <div>
-                                            <span class="section-kicker">Comprobante</span>
-                                            <h3>Sube tu voucher y registra el monto</h3>
-                                            <p id="booking-receipt-summary">Primero elige una habitacion para ver cuanto debes depositar.</p>
-                                        </div>
-                                        <button type="button" class="booking-breakdown-toggle" data-scroll-breakdown>
-                                            Ver desglose
-                                            <i class="bi bi-arrow-down-circle" aria-hidden="true"></i>
-                                        </button>
-                                    </div>
-
-                                    <label class="form-label" for="booking-payment-amount">Cuanto estas depositando</label>
-                                    <div class="booking-amount-field">
-                                        <div class="booking-payment-amount-wrap">
-                                            <span id="booking-payment-amount-label">Monto en Bs. Bolivianos</span>
-                                            <input type="number" id="booking-payment-amount" name="payment_amount" class="form-control @error('payment_amount') is-invalid @enderror" value="{{ old('payment_amount') }}" min="0.01" step="0.01" placeholder="Ejemplo: 120.00" required>
-                                        </div>
-                                    </div>
-                                    <div class="booking-field-help" id="booking-payment-amount-help">Primero elige una habitacion para ver el anticipo minimo requerido.</div>
-                                    <div class="booking-deposit-breakdown" id="booking-deposit-breakdown" hidden>
-                                        <div class="booking-deposit-breakdown__head">
-                                            <span class="section-kicker">Desglose del deposito</span>
-                                            <strong id="booking-exchange-rate-label">Se usan los precios BOB/USD registrados para la habitacion</strong>
-                                        </div>
-                                        <div class="booking-deposit-breakdown__grid">
-                                            <div>
-                                                <span>Debes pagar minimo</span>
-                                                <strong id="booking-breakdown-min-bob">-</strong>
-                                                <small id="booking-breakdown-min-usd">-</small>
-                                            </div>
-                                            <div>
-                                                <span>Total de la estadia</span>
-                                                <strong id="booking-breakdown-total-bob">-</strong>
-                                                <small id="booking-breakdown-total-usd">-</small>
-                                            </div>
-                                            <div>
-                                                <span>Tu deposito</span>
-                                                <strong id="booking-breakdown-payment-base">-</strong>
-                                                <small id="booking-breakdown-payment-note">Selecciona moneda y monto.</small>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <input type="hidden" id="booking-payment-amount" name="payment_amount" value="{{ old('payment_amount') }}" min="0.01" step="0.01" required>
                                     @error('payment_amount')
                                         <div class="invalid-feedback d-block">{{ $message }}</div>
                                     @enderror
@@ -638,22 +673,24 @@
                                     <div><strong>{{ __('public.booking_success.dates') }}</strong><span id="summary-dates">{{ __('public.booking.summary_dates_empty') }}</span></div>
                                     <div><strong>{{ __('public.booking.summary_nights') }}</strong><span id="summary-nights">-</span></div>
                                     <div><strong>{{ __('public.booking_success.room_type') }}</strong><span id="summary-room-type">{{ $selectedType?->name ?: '-' }}</span></div>
-                                    <div><strong>{{ __('public.booking.summary_price_per_night') }}</strong><span id="summary-price-per-night">-</span></div>
                                     <div><strong>{{ __('public.booking.summary_discount') }}</strong><span id="summary-discount">-</span></div>
-                                    <div><strong>{{ __('public.booking.summary_required_deposit') }}</strong><span id="summary-deposit">-</span></div>
-                                    <div><strong>Monto que estas depositando</strong><span id="summary-payment-amount">-</span></div>
                                     <div><strong>{{ __('public.booking_success.payment_method') }}</strong><span id="summary-payment-method">{{ $selectedPaymentMethodLabel }}</span></div>
-                                    <div><strong>{{ __('public.booking_success.total_estimated') }}</strong><span id="summary-total">-</span></div>
                                 </div>
                                 <div class="booking-inline-alert" id="summary-deposit-help">
-                                    {{ __('public.booking.deposit_help_empty') }}
+                                    El monto final se muestra aqui, en el paso de pago, segun tu ubicacion, nacionalidad y moneda asignada automaticamente.
                                 </div>
                             </div>
 
-                            <div class="form-check mt-4">
+                            <div class="booking-accept-card mt-4" data-accept-card>
                                 <input type="checkbox" id="accept_terms" name="accept_terms" value="1" class="form-check-input @error('accept_terms') is-invalid @enderror" @checked(old('accept_terms')) required>
-                                <label class="form-check-label" for="accept_terms">
-                                    {{ __('public.booking.accept_terms_label') }}
+                                <label class="booking-accept-card-label" for="accept_terms">
+                                    <span class="booking-accept-card-check">
+                                        <i class="bi bi-check2" aria-hidden="true"></i>
+                                    </span>
+                                    <span>
+                                        <strong>Marca aqui para confirmar</strong>
+                                        <small>{{ __('public.booking.accept_terms_label') }}</small>
+                                    </span>
                                 </label>
                                 @error('accept_terms')
                                     <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -664,7 +701,7 @@
                                 <div class="booking-step-tip">{{ __('public.booking.submit_help') }}</div>
                                 <div class="booking-step-action-buttons">
                                     <button type="button" class="btn btn-public-ghost" data-step-prev>{{ __('public.booking.back') }}</button>
-                                    <button type="submit" class="btn btn-public-primary" id="submit-booking-button" disabled>{{ __('public.booking.book_button') }}</button>
+                                    <button type="submit" class="btn btn-public-primary" id="submit-booking-button" disabled data-ready-text="{{ __('public.booking.book_button') }}" data-waiting-text="Primero marca la confirmacion">Primero marca la confirmacion</button>
                                 </div>
                             </div>
                         </div>
@@ -713,8 +750,6 @@
                                 <div class="booking-side-summary">
                                 <div><span>{{ __('public.booking.side_summary_dates') }}</span><strong id="side-summary-dates">{{ __('public.booking.summary_dates_empty') }}</strong></div>
                                 <div><span>{{ __('public.booking.side_summary_room') }}</span><strong id="side-summary-room">{{ $selectedType?->name ?: '-' }}</strong></div>
-                                <div><span>{{ __('public.booking.side_summary_deposit') }}</span><strong id="side-summary-deposit">-</strong></div>
-                                <div><span>{{ __('public.booking.side_summary_total') }}</span><strong id="side-summary-total">-</strong></div>
                             </div>
                         </div>
 
@@ -754,16 +789,19 @@
             const bookingSuccessStatusLink = document.getElementById('booking-success-status-link');
             const bookingSuccessNewRequest = document.getElementById('booking-success-new-request');
             const roomTypeSelect = document.getElementById('booking-room-type');
+            const roomIdInput = document.getElementById('booking-room-id');
             const submitButton = document.getElementById('submit-booking-button');
             const submitLoader = document.getElementById('booking-submit-loader');
             const qrModal = document.getElementById('booking-qr-modal');
             const qrModalTitle = document.getElementById('booking-qr-modal-title');
             const qrModalImage = document.getElementById('booking-qr-modal-image');
             const qrModalDownload = document.getElementById('booking-qr-modal-download');
+            const acceptTermsCard = document.querySelector('[data-accept-card]');
             const openQrModalButtons = document.querySelectorAll('[data-open-qr-modal]');
             const closeQrModalButtons = document.querySelectorAll('[data-close-qr-modal]');
-            const scrollBreakdownButton = document.querySelector('[data-scroll-breakdown]');
             const paymentMethodFields = document.querySelectorAll('input[name="preferred_payment_method"]');
+            const paymentMethodCards = document.querySelectorAll('[data-payment-method-card]');
+            const paymentRoutingHelp = document.getElementById('booking-payment-routing-help');
             const paymentGuides = document.querySelectorAll('[data-booking-payment-guide]');
             const wizardCurrentStepLabel = document.getElementById('wizard-current-step-label');
             const progressItems = Array.from(document.querySelectorAll('[data-progress-item]'));
@@ -786,18 +824,19 @@
                 sideDeposit: document.getElementById('side-summary-deposit'),
                 sideTotal: document.getElementById('side-summary-total'),
             };
+            const setText = (element, value) => {
+                if (element) {
+                    element.textContent = value;
+                }
+            };
             const depositHelp = document.getElementById('summary-deposit-help');
             const paymentAmountHelp = document.getElementById('booking-payment-amount-help');
-            const depositBreakdown = document.getElementById('booking-deposit-breakdown');
-            const exchangeRateLabel = document.getElementById('booking-exchange-rate-label');
-            const breakdown = {
-                minBob: document.getElementById('booking-breakdown-min-bob'),
-                minUsd: document.getElementById('booking-breakdown-min-usd'),
-                totalBob: document.getElementById('booking-breakdown-total-bob'),
-                totalUsd: document.getElementById('booking-breakdown-total-usd'),
-                paymentBase: document.getElementById('booking-breakdown-payment-base'),
-                paymentNote: document.getElementById('booking-breakdown-payment-note'),
-            };
+            const attractionCopy = document.getElementById('booking-payment-attraction-copy');
+            const attractionPercentage = document.getElementById('booking-attraction-percentage');
+            const attractionMinimum = document.getElementById('booking-attraction-minimum');
+            const attractionTotalLabel = document.getElementById('booking-attraction-total-label');
+            const attractionTotal = document.getElementById('booking-attraction-total');
+            const attractionDiscount = document.getElementById('booking-attraction-discount');
             const selectedCurrencyLabels = document.querySelectorAll('[data-selected-currency-label]');
             const qrCurrencyPanels = document.querySelectorAll('[data-qr-currency-panel]');
             const receiptSummary = document.getElementById('booking-receipt-summary');
@@ -817,6 +856,11 @@
                 adults: document.getElementById('booking-adults'),
                 children: document.getElementById('booking-children'),
                 fullName: document.getElementById('full_name'),
+                nationality: document.getElementById('nationality'),
+                whatsapp: document.getElementById('whatsapp'),
+                whatsappCode: document.getElementById('whatsapp-code'),
+                whatsappNumber: document.getElementById('whatsapp-number'),
+                visitorLocation: document.getElementById('booking-visitor-location'),
                 paymentCurrency: document.getElementById('booking-payment-currency'),
                 paymentAmount: document.getElementById('booking-payment-amount'),
                 receiptImage: document.getElementById('booking-receipt'),
@@ -825,6 +869,7 @@
 
             let availabilityLoaded = false;
             let selectedAvailableTypeId = roomTypeSelect.value || null;
+            let selectedRoomLabel = '';
             let availabilityTimeout = null;
             let currentStep = 0;
             let currentQuote = null;
@@ -836,21 +881,32 @@
             const setSummaryDefaults = () => {
                 summary.dates.textContent = @json(__('public.booking.summary_dates_empty'));
                 summary.nights.textContent = '-';
-                summary.pricePerNight.textContent = '-';
+                setText(summary.pricePerNight, '-');
                 summary.discount.textContent = '-';
-                summary.deposit.textContent = '-';
-                summary.paymentAmount.textContent = '-';
-                summary.total.textContent = '-';
+                setText(summary.deposit, '-');
+                setText(summary.paymentAmount, '-');
+                setText(summary.total, '-');
                 summary.sideDates.textContent = @json(__('public.booking.summary_dates_empty'));
-                summary.sideDeposit.textContent = '-';
-                summary.sideTotal.textContent = '-';
-                depositHelp.textContent = @json(__('public.booking.deposit_help_empty'));
-                paymentAmountHelp.textContent = 'Primero elige una habitacion para ver el anticipo minimo requerido.';
+                setText(summary.sideDeposit, '-');
+                setText(summary.sideTotal, '-');
+                depositHelp.textContent = 'El monto se muestra unicamente en el paso de pago.';
+                if (paymentAmountHelp) {
+                    if (paymentAmountHelp) {
+                        paymentAmountHelp.textContent = 'Primero elige una habitacion para ver el anticipo minimo requerido.';
+                    }
+                }
                 if (receiptSummary) {
                     receiptSummary.textContent = 'Primero elige una habitacion para ver cuanto debes depositar.';
                 }
-                depositBreakdown.hidden = true;
-                fields.paymentCurrency?.querySelector('option[value="USD"]')?.removeAttribute('disabled');
+                setText(attractionPercentage, 'Anticipo minimo');
+                setText(attractionMinimum, '-');
+                setText(attractionTotalLabel, 'Total de tu estadia');
+                setText(attractionTotal, '-');
+                setText(attractionDiscount, 'Sin promocion');
+                setText(attractionCopy, 'Elige una habitacion y aqui veras el anticipo minimo y el total final de tu estadia.');
+                if (fields.paymentCurrency) {
+                    fields.paymentCurrency.value = isLocalBolivianPaymentFlow() ? 'BOB' : 'USD';
+                }
                 syncCurrencyCopy();
                 currentQuote = null;
                 submitButton.disabled = true;
@@ -864,11 +920,106 @@
                 return `${symbol}${numericAmount.toFixed(2)}`;
             };
 
+            const visitorCurrency = () => {
+                const htmlCurrency = document.documentElement.dataset.publicCurrency;
+
+                return htmlCurrency || 'BOB';
+            };
+
             const selectedPaymentCurrency = () => fields.paymentCurrency?.value || @json($hotelSetting->baseCurrency());
 
-            const oppositeCurrency = (currency) => currency === 'USD' ? 'BOB' : 'USD';
-
             const currencyName = (currency) => currency === 'USD' ? '$us Dolares' : 'Bs. Bolivianos';
+
+            const normalizeText = (value) => String(value || '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .trim()
+                .toLowerCase();
+
+            const isBoliviaText = (value) => ['bolivia', 'boliviana', 'boliviano', 'bo'].includes(normalizeText(value));
+
+            const syncWhatsappValue = () => {
+                if (!fields.whatsapp) {
+                    return;
+                }
+
+                const code = fields.whatsappCode?.value || '';
+                const number = (fields.whatsappNumber?.value || '').trim();
+                fields.whatsapp.value = number ? `${code} ${number}`.trim() : '';
+            };
+
+            const visitorIsInBolivia = () => {
+                const htmlCurrency = document.documentElement.dataset.publicCurrency;
+
+                if (htmlCurrency) {
+                    return htmlCurrency === 'BOB';
+                }
+
+                const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+                const languages = navigator.languages?.length ? navigator.languages : [navigator.language].filter(Boolean);
+
+                return timezone === 'America/La_Paz' || languages.some((language) => /(^|-)BO$/i.test(language));
+            };
+
+            const customerIsBolivian = () => isBoliviaText(fields.nationality?.value);
+
+            const isLocalBolivianPaymentFlow = () => visitorIsInBolivia() && customerIsBolivian();
+
+            const allowedPaymentMethods = () => isLocalBolivianPaymentFlow()
+                ? ['bank_qr', 'bank_transfer', 'bank_deposit']
+                : ['qr'];
+
+            const syncPaymentRouting = () => {
+                const isLocalFlow = isLocalBolivianPaymentFlow();
+                const allowedMethods = allowedPaymentMethods();
+
+                if (fields.visitorLocation) {
+                    fields.visitorLocation.value = visitorIsInBolivia() ? 'BO' : 'FOREIGN';
+                }
+
+                if (paymentRoutingHelp) {
+                    paymentRoutingHelp.textContent = isLocalFlow
+                        ? 'Como estas en Bolivia y tus datos son bolivianos, se muestran pagos locales: QR banco, transferencia o deposito.'
+                        : 'Para evitar confusion, se muestra solo QR de billetera digital para visitantes fuera de Bolivia o clientes extranjeros.';
+                }
+
+                paymentMethodCards.forEach((card) => {
+                    const method = card.dataset.paymentMethod;
+                    const configured = card.dataset.configured === 'true';
+                    const allowed = allowedMethods.includes(method);
+                    const enabled = configured && allowed;
+                    const input = card.querySelector('input[name="preferred_payment_method"]');
+
+                    card.hidden = !allowed;
+                    card.classList.toggle('is-disabled', !enabled);
+
+                    if (input) {
+                        input.disabled = !enabled;
+                        if (!enabled) {
+                            input.checked = false;
+                        }
+                    }
+                });
+
+                if (!document.querySelector('input[name="preferred_payment_method"]:checked:not(:disabled)')) {
+                    const firstEnabled = Array.from(paymentMethodFields).find((field) => !field.disabled);
+                    if (firstEnabled) {
+                        firstEnabled.checked = true;
+                    }
+                }
+
+                if (fields.paymentCurrency) {
+                    fields.paymentCurrency.value = isLocalFlow ? 'BOB' : 'USD';
+                }
+
+                syncPaymentMethodSummary();
+                syncPaymentGuides();
+                syncCurrencyCopy();
+
+                if (currentQuote) {
+                    syncPaymentAmountLimits(true);
+                }
+            };
 
             const syncCurrencyCopy = () => {
                 const currency = selectedPaymentCurrency();
@@ -878,7 +1029,8 @@
                 });
 
                 qrCurrencyPanels.forEach((panel) => {
-                    panel.classList.toggle('d-none', panel.dataset.qrCurrencyPanel !== currency);
+                    const currencies = String(panel.dataset.qrCurrencyPanel || '').split(/\s+/).filter(Boolean);
+                    panel.classList.toggle('d-none', !currencies.includes('ANY') && !currencies.includes(currency));
                 });
 
                 if (paymentAmountLabel) {
@@ -906,19 +1058,12 @@
 
             const syncPaymentAmountSummary = () => {
                 const amount = Number(fields.paymentAmount?.value || 0);
-                summary.paymentAmount.textContent = amount > 0 ? formatBookingMoney(amount, selectedPaymentCurrency()) : '-';
-                syncDepositBreakdown();
+                setText(summary.paymentAmount, amount > 0 ? formatBookingMoney(amount, selectedPaymentCurrency()) : '-');
             };
 
             const syncPaymentAmountLimits = (shouldAutofill = false) => {
                 if (!currentQuote || !fields.paymentAmount) {
                     return;
-                }
-
-                const usdOption = fields.paymentCurrency?.querySelector('option[value="USD"]');
-
-                if (usdOption) {
-                    usdOption.disabled = currentQuote.supports_usd === false;
                 }
 
                 if (fields.paymentCurrency?.value === 'USD' && currentQuote.supports_usd === false) {
@@ -928,7 +1073,9 @@
                 const currency = selectedPaymentCurrency();
                 const minAmount = quoteAmount('deposit_amount_required', currency);
                 const maxAmount = quoteAmount('total_amount', currency);
-                const alternateCurrency = oppositeCurrency(currency);
+                const discountAmount = quoteAmount('discount_total_amount', currency);
+                const discountLabel = currentQuote.discount_label || '';
+                const depositPercentage = Number(currentQuote.deposit_percentage || 0);
 
                 syncCurrencyCopy();
 
@@ -940,46 +1087,38 @@
                     fields.paymentAmount.value = minAmount.toFixed(2);
                 }
 
-                paymentAmountHelp.textContent = currentQuote.supports_usd === false
-                    ? `Debes depositar minimo ${quoteAmountFormatted('deposit_amount_required', currency)}. Esta habitacion aun no tiene precio en dolares registrado.`
-                    : `Debes depositar minimo ${quoteAmountFormatted('deposit_amount_required', currency)}. Total estimado: ${quoteAmountFormatted('total_amount', currency)}. Referencia en ${alternateCurrency}: ${quoteAmountFormatted('deposit_amount_required', alternateCurrency)}.`;
+                if (paymentAmountHelp) {
+                    paymentAmountHelp.textContent = currentQuote.supports_usd === false
+                        ? `Debes depositar minimo ${quoteAmountFormatted('deposit_amount_required', currency)}. Esta habitacion aun no tiene precio en dolares registrado.`
+                        : `Anticipo minimo: ${quoteAmountFormatted('deposit_amount_required', currency)} (${depositPercentage}%). Total de la estadia: ${quoteAmountFormatted('total_amount', currency)}.`;
+                }
 
                 if (receiptSummary) {
                     receiptSummary.textContent = `Para reservar debes depositar minimo ${quoteAmountFormatted('deposit_amount_required', currency)}. El total estimado de tu estadia es ${quoteAmountFormatted('total_amount', currency)}.`;
                 }
 
-                syncDepositBreakdown();
-            };
+                setText(attractionPercentage, depositPercentage > 0 ? `Anticipo minimo ${depositPercentage}%` : 'Anticipo minimo');
+                setText(attractionMinimum, quoteAmountFormatted('deposit_amount_required', currency));
+                setText(
+                    attractionTotalLabel,
+                    discountAmount > 0 && discountLabel
+                        ? `Total con ${discountLabel} aplicado`
+                        : 'Total de tu estadia'
+                );
+                setText(attractionTotal, quoteAmountFormatted('total_amount', currency));
+                setText(
+                    attractionDiscount,
+                    discountAmount > 0
+                        ? (currentQuote.promotion_name || discountLabel || 'Promocion aplicada')
+                        : 'Sin promocion'
+                );
+                setText(
+                    attractionCopy,
+                    discountAmount > 0
+                        ? 'El total mostrado ya incluye la promocion. Deposita el anticipo minimo para que el hotel revise y confirme tu reserva.'
+                        : 'Deposita el anticipo minimo para que el hotel revise y confirme tu reserva.'
+                );
 
-            const syncDepositBreakdown = () => {
-                if (!currentQuote || !depositBreakdown) {
-                    return;
-                }
-
-                depositBreakdown.hidden = false;
-                const currency = selectedPaymentCurrency();
-                const alternateCurrency = oppositeCurrency(currency);
-                const minAmount = quoteAmount('deposit_amount_required', currency);
-                const totalAmount = quoteAmount('total_amount', currency);
-
-                exchangeRateLabel.textContent = 'Sin conversion automatica: se usa el precio registrado en la moneda elegida.';
-                breakdown.minBob.textContent = quoteAmountFormatted('deposit_amount_required', currency);
-                breakdown.minUsd.textContent = `Referencia ${alternateCurrency}: ${quoteAmountFormatted('deposit_amount_required', alternateCurrency)}`;
-                breakdown.totalBob.textContent = quoteAmountFormatted('total_amount', currency);
-                breakdown.totalUsd.textContent = `Referencia ${alternateCurrency}: ${quoteAmountFormatted('total_amount', alternateCurrency)}`;
-
-                const amount = Number(fields.paymentAmount?.value || 0);
-
-                if (!amount || amount <= 0) {
-                    breakdown.paymentBase.textContent = '-';
-                    breakdown.paymentNote.textContent = 'Selecciona moneda y escribe el monto que figura en tu comprobante.';
-                    return;
-                }
-
-                breakdown.paymentBase.textContent = formatBookingMoney(amount, currency);
-                breakdown.paymentNote.textContent = minAmount > 0 && amount < minAmount
-                    ? `Todavia falta ${formatBookingMoney(minAmount - amount, currency)} para cubrir el anticipo minimo.`
-                    : `Cubre el anticipo minimo. Puedes depositar hasta ${formatBookingMoney(totalAmount, currency)} si deseas cancelar todo.`;
             };
 
             const validatePaymentAmount = () => {
@@ -1085,6 +1224,19 @@
                 updateWizardUi();
             };
 
+            const syncAcceptTermsState = () => {
+                const isAccepted = Boolean(fields.acceptTerms?.checked);
+
+                acceptTermsCard?.classList.toggle('is-checked', isAccepted);
+
+                if (submitButton) {
+                    submitButton.textContent = isAccepted
+                        ? (submitButton.dataset.readyText || submitButton.textContent)
+                        : (submitButton.dataset.waitingText || submitButton.textContent);
+                    submitButton.disabled = !isAccepted || !availabilityLoaded;
+                }
+            };
+
             const ensureFieldValidity = (input) => {
                 if (!input) {
                     return true;
@@ -1121,7 +1273,7 @@
                         await fetchAvailability();
                     }
 
-                    if (!selectedAvailableTypeId || !roomTypeSelect.value || String(selectedAvailableTypeId) !== String(roomTypeSelect.value)) {
+                    if (!selectedAvailableTypeId || !roomTypeSelect.value || !roomIdInput.value || String(selectedAvailableTypeId) !== String(roomTypeSelect.value)) {
                         setAvailabilityMessage('Selecciona una habitacion disponible para continuar.');
                         return false;
                     }
@@ -1134,7 +1286,8 @@
                 }
 
                 if (currentStep === 3) {
-                    const checkedMethod = document.querySelector('input[name="preferred_payment_method"]:checked');
+                    syncPaymentRouting();
+                    const checkedMethod = document.querySelector('input[name="preferred_payment_method"]:checked:not(:disabled)');
 
                     if (!checkedMethod) {
                         paymentMethodFields[0]?.reportValidity();
@@ -1157,7 +1310,7 @@
 
             const scheduleAvailabilityFetch = () => {
                 availabilityLoaded = false;
-                submitButton.disabled = true;
+                syncAcceptTermsState();
 
                 if (availabilityTimeout) {
                     window.clearTimeout(availabilityTimeout);
@@ -1175,50 +1328,88 @@
                 }, 450);
             };
 
-            const renderAvailabilityResults = (roomTypes) => {
-                if (!roomTypes.length) {
+            const renderAvailabilityResults = (rooms) => {
+                if (!rooms.length) {
                     resultsContainer.innerHTML = `
                         <div class="empty-state-public booking-empty-state-rich">
                             <strong>No encontramos habitaciones libres para esos datos.</strong>
-                            <span>Cambia las fechas, reduce huespedes o deja el tipo de habitacion en "ver todas".</span>
+                            <span>Cambia las fechas o reduce la cantidad de huespedes para ver otras habitaciones.</span>
                         </div>
                     `;
                     return;
                 }
 
-                resultsContainer.innerHTML = roomTypes.map((roomType) => `
-                    <article class="booking-result-card ${String(selectedAvailableTypeId) === String(roomType.id) ? 'is-selected' : ''}" data-room-type-card="${roomType.id}">
-                        <div class="d-flex justify-content-between gap-3 flex-wrap align-items-start">
-                            <div>
-                                <span class="booking-result-kicker">${@json(__('public.booking.available_room_kicker'))}</span>
-                                <h3 class="mb-1">${escapeHtml(roomType.name)}</h3>
-                                <div class="text-muted small">${escapeHtml(roomType.capacity_summary)}</div>
-                            </div>
-                            <div class="price-chip">${roomType.promotion?.final_price_formatted ?? roomType.base_price_formatted}</div>
-                        </div>
-                        <div class="booking-result-meta mt-3">
-                            <span><i class="bi bi-door-open"></i> ${templates.availableCount.replace('__COUNT__', roomType.available_rooms_count)}</span>
-                            <span><i class="bi bi-people"></i> ${templates.maxGuests.replace('__COUNT__', roomType.max_guests)}</span>
-                            <span><i class="bi bi-cash-stack"></i> ${templates.baseLabel.replace('__PRICE__', roomType.base_price_formatted)}</span>
-                            <span><i class="bi bi-currency-dollar"></i> $us ${Number(roomType.price_usd ?? 0).toFixed(2)}</span>
-                        </div>
-                        <div class="booking-inline-alert mt-3">
-                            ${templates.depositHelp
-                                .replace('__PERCENTAGE__', roomType.deposit_percentage)
-                                .replace('__AMOUNT__', roomType.deposit_amount_required_formatted)}
-                        </div>
-                        ${roomType.promotion ? `
-                            <div class="promo-badge mt-3">
-                                ${escapeHtml(roomType.promotion.name)} - ${escapeHtml(roomType.promotion.discount_label)} - ${roomType.promotion.final_price_formatted}
-                            </div>
-                        ` : ''}
-                        <div class="mt-3">
-                            <button type="button" class="btn btn-public-outline booking-select-button" data-select-room-type="${roomType.id}" data-room-type-name="${escapeHtml(roomType.name)}">
-                                ${String(selectedAvailableTypeId) === String(roomType.id) ? 'Habitacion seleccionada' : @json(__('public.booking.select_room'))}
-                            </button>
-                        </div>
-                    </article>
-                `).join('');
+                resultsContainer.innerHTML = `
+                    <div class="booking-room-choice-grid">
+                        ${rooms.map((room) => {
+                            const selectedRoom = String(roomIdInput.value || '') === String(room.id);
+                            const images = Array.isArray(room.gallery_images) ? room.gallery_images : [];
+                            const imageHtml = images.length
+                                ? `<div class="booking-room-choice-gallery">${images.slice(0, 4).map((src, index) => `<img src="${escapeHtml(src)}" alt="Habitacion ${escapeHtml(room.number)}" class="${index === 0 ? 'is-main' : ''}">`).join('')}</div>`
+                                : `<div class="booking-room-choice-placeholder"><i class="bi bi-image"></i></div>`;
+
+                            return `
+                            <article class="booking-room-choice booking-room-choice-room ${selectedRoom ? 'is-selected' : ''}" data-room-card="${room.id}">
+                                ${imageHtml}
+                                <div class="booking-room-choice-body">
+                                    <span class="booking-result-kicker">Habitacion disponible</span>
+                                    <strong>Habitacion ${escapeHtml(room.number)}</strong>
+                                    <small>${escapeHtml(room.room_type_name || 'Habitacion')} ${room.floor ? ` / ${escapeHtml(room.floor)}` : ''}</small>
+                                    ${room.description ? `<p>${escapeHtml(room.description)}</p>` : ''}
+                                    <div class="booking-result-meta mt-3">
+                                        <span><i class="bi bi-people"></i> ${templates.maxGuests.replace('__COUNT__', room.max_guests)}</span>
+                                        <span><i class="bi bi-percent"></i> Anticipo: ${room.deposit_percentage}%</span>
+                                        ${room.promotion ? `<span><i class="bi bi-tag"></i> ${escapeHtml(room.promotion.name)} - ${escapeHtml(room.promotion.discount_label)}</span>` : ''}
+                                    </div>
+                                    <button type="button" class="btn btn-public-outline booking-select-button mt-3" data-select-room-type="${room.room_type_id}" data-select-room-id="${room.id}" data-room-type-name="${escapeHtml(room.room_type_name)}" data-room-number="${escapeHtml(room.number)}">
+                                        ${selectedRoom ? 'Habitacion seleccionada' : 'Elegir esta habitacion'}
+                                    </button>
+                                </div>
+                            </article>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            };
+
+            const availableRoomLabel = (room) => `Habitacion ${room.number || ''} - ${room.room_type_name || ''}`.trim();
+
+            const bestAvailableRoom = (rooms) => [...rooms].sort((first, second) => {
+                const capacityDifference = Number(first.max_guests || 0) - Number(second.max_guests || 0);
+
+                if (capacityDifference !== 0) {
+                    return capacityDifference;
+                }
+
+                return String(first.number || '').localeCompare(String(second.number || ''), 'es', { numeric: true });
+            })[0] || null;
+
+            const selectAvailableRoom = (room) => {
+                if (!room) {
+                    roomTypeSelect.value = '';
+                    selectedAvailableTypeId = null;
+                    roomIdInput.value = '';
+                    selectedRoomLabel = '';
+                    summary.roomType.textContent = '-';
+                    summary.sideRoom.textContent = '-';
+                    return;
+                }
+
+                roomTypeSelect.value = room.room_type_id;
+                selectedAvailableTypeId = String(room.room_type_id);
+                roomIdInput.value = room.id || '';
+                selectedRoomLabel = availableRoomLabel(room);
+                summary.roomType.textContent = selectedRoomLabel;
+                summary.sideRoom.textContent = selectedRoomLabel;
+
+                document.querySelectorAll('.booking-room-choice').forEach((card) => {
+                    card.classList.toggle('is-selected', String(card.dataset.roomCard) === String(room.id));
+                });
+
+                document.querySelectorAll('[data-select-room-id]').forEach((button) => {
+                    const isSelected = String(button.dataset.selectRoomId) === String(room.id);
+                    button.textContent = isSelected ? 'Habitacion seleccionada' : 'Elegir esta habitacion';
+                });
             };
 
             const buildAvailabilityParams = () => {
@@ -1227,10 +1418,6 @@
                 params.set('check_out', fields.checkOut.value);
                 params.set('adults', fields.adults.value);
                 params.set('children', fields.children.value || '0');
-
-                if (roomTypeSelect.value) {
-                    params.set('room_type_id', roomTypeSelect.value);
-                }
 
                 return params;
             };
@@ -1254,18 +1441,28 @@
 
                     const payload = await response.json();
                     availabilityLoaded = true;
-                    const availableRoomTypes = payload.room_types ?? [];
-                    const selectedStillAvailable = roomTypeSelect.value
-                        ? availableRoomTypes.some((roomType) => String(roomType.id) === String(roomTypeSelect.value))
+                    const availableRooms = payload.rooms ?? [];
+                    const previousRoomId = roomIdInput.value;
+                    const selectedStillAvailable = roomIdInput.value
+                        ? availableRooms.some((room) => String(room.id) === String(roomIdInput.value))
                         : false;
+                    const selectedRoom = selectedStillAvailable
+                        ? availableRooms.find((room) => String(room.id) === String(roomIdInput.value))
+                        : bestAvailableRoom(availableRooms);
 
-                    selectedAvailableTypeId = selectedStillAvailable ? roomTypeSelect.value : null;
-                    renderAvailabilityResults(availableRoomTypes);
-                    setAvailabilityMessage(payload.available ? @json(__('public.booking.ready')) : @json(__('public.booking.availability_none')));
+                    selectAvailableRoom(selectedRoom);
+                    renderAvailabilityResults(availableRooms);
+                    selectAvailableRoom(selectedRoom);
 
-                    if (payload.available && selectedStillAvailable) {
+                    if (payload.available && selectedRoom) {
+                        const message = previousRoomId && !selectedStillAvailable
+                            ? @json(__('public.booking.auto_room_changed'))
+                            : @json(__('public.booking.ready'));
+
+                        setAvailabilityMessage(message);
                         await fetchQuote();
                     } else {
+                        setAvailabilityMessage(@json(__('public.booking.availability_none')));
                         summary.roomType.textContent = '-';
                         summary.sideRoom.textContent = '-';
                     }
@@ -1281,15 +1478,18 @@
                     return;
                 }
 
-                const selectedRoomName = roomTypeSelect.selectedOptions[0]?.dataset?.name ?? '-';
+                const selectedRoomName = selectedRoomLabel || (roomTypeSelect.selectedOptions[0]?.dataset?.name ?? '-');
                 summary.roomType.textContent = selectedRoomName;
                 summary.sideRoom.textContent = selectedRoomName;
-                summary.pricePerNight.textContent = @json(__('public.booking.searching'));
+                setText(summary.pricePerNight, @json(__('public.booking.searching')));
                 summary.discount.textContent = @json(__('public.booking.searching'));
-                summary.total.textContent = @json(__('public.booking.searching'));
+                setText(summary.total, @json(__('public.booking.searching')));
 
                 const formData = new FormData();
                 formData.append('room_type_id', roomTypeSelect.value);
+                if (roomIdInput.value) {
+                    formData.append('room_id', roomIdInput.value);
+                }
                 formData.append('check_in', fields.checkIn.value);
                 formData.append('check_out', fields.checkOut.value);
                 formData.append('adults', fields.adults.value);
@@ -1317,35 +1517,33 @@
 
                     summary.dates.textContent = formattedDates;
                     summary.nights.textContent = templates.nightsCount.replace('__COUNT__', payload.nights);
-                    summary.pricePerNight.textContent = payload.price_per_night_formatted;
+                    setText(summary.pricePerNight, payload.price_per_night_formatted);
                     summary.discount.textContent = payload.discount_amount > 0
-                        ? `${payload.discount_amount_formatted}${payload.discount_label ? ` (${payload.discount_label})` : ''}`
+                        ? (payload.discount_label || 'Oferta aplicada')
                         : '-';
-                    summary.deposit.textContent = payload.deposit_amount_required_formatted;
-                    summary.total.textContent = payload.total_amount_formatted;
+                    setText(summary.deposit, payload.deposit_amount_required_formatted);
+                    setText(summary.total, payload.total_amount_formatted);
                     summary.sideDates.textContent = formattedDates;
-                    summary.sideDeposit.textContent = payload.deposit_amount_required_formatted;
-                    summary.sideTotal.textContent = payload.total_amount_formatted;
+                    setText(summary.sideDeposit, payload.deposit_amount_required_formatted);
+                    setText(summary.sideTotal, payload.total_amount_formatted);
                     currentQuote = payload;
                     syncPaymentAmountLimits(true);
                     syncPaymentAmountSummary();
-                    depositHelp.textContent = templates.depositHelp
-                        .replace('__PERCENTAGE__', payload.deposit_percentage)
-                        .replace('__AMOUNT__', payload.deposit_amount_required_formatted);
-                    submitButton.disabled = !availabilityLoaded;
+                    depositHelp.textContent = 'El monto fue mostrado en el paso de pago. Revisa fechas, habitacion, descuento y metodo antes de enviar.';
+                    syncAcceptTermsState();
                     setAvailabilityMessage(@json(__('public.booking.ready')));
                 } catch (error) {
-                    summary.pricePerNight.textContent = '-';
+                    setText(summary.pricePerNight, '-');
                     summary.discount.textContent = error.message;
-                    summary.deposit.textContent = '-';
-                    summary.paymentAmount.textContent = '-';
-                    summary.total.textContent = '-';
-                    summary.sideDeposit.textContent = '-';
-                    summary.sideTotal.textContent = '-';
-                    depositHelp.textContent = @json(__('public.booking.deposit_help_empty'));
+                    setText(summary.deposit, '-');
+                    setText(summary.paymentAmount, '-');
+                    setText(summary.total, '-');
+                    setText(summary.sideDeposit, '-');
+                    setText(summary.sideTotal, '-');
+                    depositHelp.textContent = 'El monto se muestra unicamente en el paso de pago.';
                     paymentAmountHelp.textContent = 'Primero elige una habitacion para ver el anticipo minimo requerido.';
                     currentQuote = null;
-                    submitButton.disabled = true;
+                    syncAcceptTermsState();
                     setAvailabilityMessage(error.message);
                 }
             };
@@ -1359,10 +1557,11 @@
                     return;
                 }
 
-                roomTypeSelect.value = button.dataset.selectRoomType;
-                selectedAvailableTypeId = button.dataset.selectRoomType;
-                document.querySelectorAll('[data-room-type-card]').forEach((card) => {
-                    card.classList.toggle('is-selected', card.dataset.roomTypeCard === selectedAvailableTypeId);
+                selectAvailableRoom({
+                    id: button.dataset.selectRoomId || '',
+                    room_type_id: button.dataset.selectRoomType,
+                    room_type_name: button.dataset.roomTypeName || '',
+                    number: button.dataset.roomNumber || '',
                 });
 
                 await fetchQuote();
@@ -1373,6 +1572,8 @@
                 field.addEventListener('change', () => {
                     if (field === roomTypeSelect) {
                         selectedAvailableTypeId = null;
+                        roomIdInput.value = '';
+                        selectedRoomLabel = '';
                         const selectedRoomName = roomTypeSelect.selectedOptions[0]?.dataset?.name ?? '-';
                         summary.roomType.textContent = selectedRoomName;
                         summary.sideRoom.textContent = selectedRoomName;
@@ -1398,10 +1599,27 @@
                 });
             });
 
+            [fields.nationality].forEach((field) => {
+                field?.addEventListener('input', syncPaymentRouting);
+                field?.addEventListener('change', syncPaymentRouting);
+            });
+
+            if (window.jQuery) {
+                [fields.nationality].forEach((field) => {
+                    if (field) {
+                        window.jQuery(field).on('select2:select select2:clear change', syncPaymentRouting);
+                    }
+                });
+            }
+
             fields.paymentAmount?.addEventListener('input', () => {
                 fields.paymentAmount.setCustomValidity('');
                 syncPaymentAmountSummary();
             });
+
+            fields.whatsappCode?.addEventListener('change', syncWhatsappValue);
+            fields.whatsappNumber?.addEventListener('input', syncWhatsappValue);
+            fields.acceptTerms?.addEventListener('change', syncAcceptTermsState);
 
             fields.paymentCurrency?.addEventListener('change', () => {
                 fields.paymentAmount?.setCustomValidity('');
@@ -1412,15 +1630,6 @@
                 }
 
                 syncPaymentAmountSummary();
-            });
-
-            scrollBreakdownButton?.addEventListener('click', () => {
-                if (currentQuote) {
-                    syncPaymentAmountLimits(false);
-                }
-
-                depositBreakdown.hidden = false;
-                depositBreakdown.scrollIntoView({ behavior: 'smooth', block: 'center' });
             });
 
             openQrModalButtons.forEach((button) => {
@@ -1494,6 +1703,7 @@
             });
 
             async function submitBookingRequest() {
+                syncWhatsappValue();
                 submitButton.disabled = true;
                 submitButton.dataset.originalText = submitButton.dataset.originalText || submitButton.textContent;
                 submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Enviando solicitud...';
@@ -1600,8 +1810,10 @@
             }
 
             syncCurrencyCopy();
+            syncPaymentRouting();
             syncPaymentMethodSummary();
             syncPaymentGuides();
+            syncAcceptTermsState();
         });
     </script>
 @endpush

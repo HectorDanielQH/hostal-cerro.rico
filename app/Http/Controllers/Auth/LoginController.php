@@ -186,6 +186,6 @@ class LoginController extends Controller
 
     protected function isDashboardUser(User $user): bool
     {
-        return $user->hasAnyRole(['admin', 'manager', 'general_manager', 'receptionist']);
+        return $user->hasAnyRole(['admin', 'manager', 'general_manager']);
     }
 }

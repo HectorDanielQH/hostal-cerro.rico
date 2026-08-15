@@ -19,24 +19,18 @@ class DatabaseSeeder extends Seeder
             PermissionSeeder::class,
             RoleSeeder::class,
             WorkShiftSeeder::class,
+            HotelSettingSeeder::class,
         ]);
 
         $this->seedSystemUsers();
-
-        $this->call([
-            HotelSettingSeeder::class,
-            RoomTypeSeeder::class,
-            RoomSeeder::class,
-            PromotionSeeder::class,
-            CustomerSeeder::class,
-            ReservationSeeder::class,
-            PaymentSeeder::class,
-            CashRegisterSeeder::class,
-        ]);
     }
 
     private function seedSystemUsers(): void
     {
+        User::query()
+            ->where('email', 'client@hotel.test')
+            ->delete();
+
         $users = [
             [
                 'name' => 'Administrador General',
@@ -46,7 +40,7 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Gerente General',
                 'email' => 'manager@hotel.test',
-                'role' => 'manager',
+                'role' => 'general_manager',
             ],
             [
                 'name' => 'Recepcion Principal',

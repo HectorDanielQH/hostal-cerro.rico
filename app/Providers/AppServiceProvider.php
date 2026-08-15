@@ -33,6 +33,7 @@ use App\Policies\RoomPolicy;
 use App\Policies\RoomTypePolicy;
 use App\Policies\UserPolicy;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -50,6 +51,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if ((bool) config('app.force_https')) {
+            URL::forceScheme('https');
+        }
+
         Gate::policy(CashRegister::class, CashRegisterPolicy::class);
         Gate::policy(Conversation::class, ConversationPolicy::class);
         Gate::policy(Customer::class, CustomerPolicy::class);
@@ -74,8 +79,10 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('view-security-menu', fn ($user) => $user->hasRole('admin'));
         Gate::define('view-admin-menu', fn ($user) => $user->hasAnyRole(['admin', 'manager']));
         Gate::define('view-reception-menu', fn ($user) => $user->hasAnyRole(['admin', 'manager', 'receptionist']));
+        Gate::define('view-reception-workspace-menu', fn ($user) => $user->hasAnyRole(['admin', 'manager', 'general_manager', 'receptionist']));
+        Gate::define('view-expanded-hotel-menu', fn ($user) => $user->hasAnyRole(['admin', 'manager', 'general_manager']));
         Gate::define('view-client-menu', fn ($user) => $user->hasRole('client'));
-        Gate::define('view-reports-menu', fn ($user) => $user->hasAnyRole(['admin', 'manager']));
+        Gate::define('view-reports-menu', fn ($user) => $user->hasAnyRole(['admin', 'manager', 'general_manager']));
         Gate::define('view-website-menu', fn ($user) => $user->hasAnyRole(['admin', 'manager']));
         Gate::define('view-settings-menu', fn ($user) => $user->can('configuracion.ver'));
     }

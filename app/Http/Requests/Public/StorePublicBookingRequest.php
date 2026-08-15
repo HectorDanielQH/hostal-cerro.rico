@@ -9,6 +9,7 @@ use App\Models\RoomType;
 use App\Services\Reservations\ReservationExpirationService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -23,6 +24,7 @@ class StorePublicBookingRequest extends FormRequest
     {
         return [
             'room_type_id' => ['required', 'exists:room_types,id'],
+            'room_id' => ['required', 'exists:rooms,id'],
             'check_in' => ['required', 'date', 'after_or_equal:today'],
             'check_out' => ['required', 'date', 'after:check_in'],
             'adults' => ['required', 'integer', 'min:1', 'max:20'],
@@ -36,7 +38,8 @@ class StorePublicBookingRequest extends FormRequest
             'email' => ['nullable', 'email', 'max:255'],
             'country' => ['nullable', 'string', 'max:100'],
             'city' => ['nullable', 'string', 'max:100'],
-            'preferred_payment_method' => ['required', Rule::in(['qr', 'bank_transfer', 'bank_deposit', 'bank', 'other'])],
+            'preferred_payment_method' => ['required', Rule::in(['qr', 'bank_qr', 'bank_transfer', 'bank_deposit', 'bank', 'other'])],
+            'visitor_location' => ['nullable', Rule::in(['BO', 'FOREIGN'])],
             'payment_currency' => ['required', Rule::in(['BOB', 'USD'])],
             'payment_amount' => ['required', 'numeric', 'min:0.01'],
             'payment_reference_number' => ['nullable', 'string', 'max:150'],
@@ -50,13 +53,14 @@ class StorePublicBookingRequest extends FormRequest
     {
         return [
             'room_type_id' => 'tipo de habitacion',
+            'room_id' => 'habitacion',
             'check_in' => 'fecha de entrada',
             'check_out' => 'fecha de salida',
             'full_name' => 'nombre completo',
             'document_type' => 'tipo de documento',
             'document_number' => 'numero de documento',
             'preferred_payment_method' => 'forma de pago preferida',
-            'payment_currency' => 'moneda del deposito',
+            'payment_currency' => 'moneda del pago',
             'payment_amount' => 'monto depositado',
             'payment_reference_number' => 'numero de referencia',
             'receipt_image' => 'comprobante de pago',
@@ -122,10 +126,13 @@ class StorePublicBookingRequest extends FormRequest
             if (
                 $paymentMethod === 'qr'
                 && blank($hotelSetting->digital_wallet_qr_image)
-                && blank($hotelSetting->bank_qr_image)
                 && blank($hotelSetting->payment_qr_image)
             ) {
-                $validator->errors()->add('preferred_payment_method', 'El QR de pago aun no esta configurado por el hotel.');
+                $validator->errors()->add('preferred_payment_method', 'El QR de billetera digital aun no esta configurado por el hotel.');
+            }
+
+            if ($paymentMethod === 'bank_qr' && blank($hotelSetting->bank_qr_image)) {
+                $validator->errors()->add('preferred_payment_method', 'El QR banco local aun no esta configurado por el hotel.');
             }
 
             if (
@@ -137,9 +144,24 @@ class StorePublicBookingRequest extends FormRequest
                 $validator->errors()->add('preferred_payment_method', 'Los datos bancarios aun no estan configurados por el hotel.');
             }
 
+            $visitorLocation = (string) $this->input('visitor_location', '');
+            $isVisitorInBolivia = $visitorLocation === 'BO';
+            $isBolivianCustomer = $this->isBoliviaText($this->input('nationality'));
+            $allowedPaymentMethods = $isVisitorInBolivia && $isBolivianCustomer
+                ? ['bank_qr', 'bank_transfer', 'bank_deposit', 'bank']
+                : ['qr'];
+
+            if (! in_array($paymentMethod, $allowedPaymentMethods, true)) {
+                $validator->errors()->add('preferred_payment_method', $isVisitorInBolivia && $isBolivianCustomer
+                    ? 'Para clientes bolivianos ubicados en Bolivia selecciona QR banco local, transferencia o deposito bancario.'
+                    : 'Para visitantes fuera de Bolivia o clientes extranjeros solo esta habilitado el QR de billetera digital.');
+            }
+
             $hasAvailability = Room::query()
                 ->where('room_type_id', $roomType->id)
+                ->when($this->filled('room_id'), fn ($query) => $query->where('id', $this->integer('room_id')))
                 ->where('is_active', true)
+                ->where('status', 'available')
                 ->whereDoesntHave('reservations', function ($query) use ($checkIn, $checkOut): void {
                     $query->whereIn('status', Reservation::ACTIVE_STATUSES)
                         ->where('check_in', '<', $checkOut->toDateString())
@@ -151,5 +173,16 @@ class StorePublicBookingRequest extends FormRequest
                 $validator->errors()->add('room_type_id', 'Ya no hay habitaciones disponibles de este tipo para las fechas seleccionadas.');
             }
         });
+    }
+
+    private function isBoliviaText(mixed $value): bool
+    {
+        $normalized = Str::of((string) $value)
+            ->ascii()
+            ->lower()
+            ->trim()
+            ->toString();
+
+        return in_array($normalized, ['bolivia', 'boliviana', 'boliviano', 'bo'], true);
     }
 }

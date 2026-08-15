@@ -66,7 +66,7 @@ class CustomerController extends Controller
 
         $validated = $request->validated();
 
-        Customer::create([
+        $customer = Customer::create([
             'user_id' => null,
             'full_name' => $validated['full_name'],
             'document_type' => $validated['document_type'] ?? null,
@@ -89,6 +89,13 @@ class CustomerController extends Controller
 
         return response()->json([
             'message' => 'Cliente registrado correctamente.',
+            'customer' => [
+                'id' => $customer->id,
+                'text' => trim($customer->full_name.($customer->document_number ? ' - '.$customer->document_number : '')),
+                'full_name' => $customer->full_name,
+                'document_type' => $customer->document_type,
+                'document_number' => $customer->document_number,
+            ],
         ]);
     }
 

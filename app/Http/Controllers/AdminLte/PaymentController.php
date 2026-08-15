@@ -53,8 +53,8 @@ class PaymentController extends Controller
     private const RESERVATION_STATUSES = [
         Reservation::STATUS_PENDING => 'Pendiente',
         Reservation::STATUS_CONFIRMED => 'Confirmada',
-        Reservation::STATUS_CHECKED_IN => 'Check-in realizado',
-        Reservation::STATUS_CHECKED_OUT => 'Check-out realizado',
+        Reservation::STATUS_CHECKED_IN => 'Ocupada',
+        Reservation::STATUS_CHECKED_OUT => 'Salida registrada',
         Reservation::STATUS_CANCELLED => 'Cancelada',
         Reservation::STATUS_EXPIRED => 'Expirada',
         Reservation::STATUS_NO_SHOW => 'No show',
@@ -147,6 +147,8 @@ class PaymentController extends Controller
             ->addColumn('reservation_balance_raw', fn (Payment $payment): float => (float) ($payment->reservation?->balance_amount ?? 0))
             ->addColumn('reservation_supports_usd', fn (Payment $payment): bool => $payment->reservation
                 && app(ReservationLedgerService::class)->supportsCurrency($payment->reservation, 'USD'))
+            ->addColumn('reservation_display_currency', fn (Payment $payment): string => $payment->reservation ? app(ReservationLedgerService::class)->displayCurrency($payment->reservation) : 'BOB')
+            ->addColumn('reservation_locked_payment_currency', fn (Payment $payment): ?string => $payment->reservation ? app(ReservationLedgerService::class)->lockedPaymentCurrency($payment->reservation, $payment) : null)
             ->addColumn('reservation_total_usd_raw', fn (Payment $payment): float => $this->reservationAmountInUsd($payment->reservation, (float) ($payment->reservation?->total_amount ?? 0)))
             ->addColumn('reservation_paid_usd_raw', fn (Payment $payment): float => $payment->reservation ? $this->reservationConfirmedUsd($payment->reservation) : 0.0)
             ->addColumn('reservation_balance_usd_raw', fn (Payment $payment): float => $this->reservationAmountInUsd($payment->reservation, (float) ($payment->reservation?->balance_amount ?? 0)))
@@ -264,6 +266,7 @@ class PaymentController extends Controller
             $hotelSetting = HotelSetting::current();
             $reservation = Reservation::query()->with('customer')->findOrFail($validated['reservation_id']);
             $currency = $hotelSetting->normalizeCurrency($validated['currency']);
+            $ledger->ensurePaymentCurrencyMatchesReservation($reservation, $currency);
             $amountBase = $ledger->paymentAmountForReservationBalance($reservation, (float) $validated['amount'], $currency);
             $exchangeRate = $currency === 'USD' ? $ledger->reservationUsdToBobRate($reservation) : 1.0;
 
@@ -342,6 +345,7 @@ class PaymentController extends Controller
             $hotelSetting = HotelSetting::current();
             $reservation = Reservation::query()->findOrFail($payment->reservation_id);
             $currency = $hotelSetting->normalizeCurrency($validated['currency']);
+            $ledger->ensurePaymentCurrencyMatchesReservation($reservation, $currency, $payment);
             $amountBase = $ledger->paymentAmountForReservationBalance($reservation, (float) $validated['amount'], $currency);
             $exchangeRate = $currency === 'USD' ? $ledger->reservationUsdToBobRate($reservation) : 1.0;
 
@@ -674,7 +678,7 @@ class PaymentController extends Controller
             && $paidAfterChange < round((float) $reservation->total_amount, 2)
         ) {
             abort(422, sprintf(
-                'No se puede dejar una reserva con check-out con saldo pendiente. Total requerido: %s.',
+                'No se puede dejar una reserva con salida registrada y saldo pendiente. Total requerido: %s.',
                 $this->formatMoney((float) $reservation->total_amount)
             ));
         }
@@ -828,7 +832,9 @@ class PaymentController extends Controller
         $documentType = self::DOCUMENT_TYPES[$customer?->document_type] ?? 'Documento';
         $documentLabel = $customer?->document_number ? $documentType.' '.$customer->document_number : '';
         $customerLabel = trim(($customer?->full_name ?? 'Sin cliente').($documentLabel ? ' - '.$documentLabel : ''));
-        $usdRate = app(ReservationLedgerService::class)->reservationUsdToBobRate($reservation);
+        $ledger = app(ReservationLedgerService::class);
+        $usdRate = $ledger->reservationUsdToBobRate($reservation);
+        $displayCurrency = $ledger->displayCurrency($reservation);
         $totalUsd = $usdRate > 0 ? round((float) $reservation->total_amount / $usdRate, 2) : 0.0;
         $balanceUsd = $usdRate > 0 ? round((float) $reservation->balance_amount / $usdRate, 2) : 0.0;
         $paidUsd = $this->reservationConfirmedUsd($reservation);
@@ -847,6 +853,8 @@ class PaymentController extends Controller
             'paid_amount' => (float) $reservation->paid_amount,
             'balance_amount' => (float) $reservation->balance_amount,
             'supports_usd' => $usdRate > 0,
+            'display_currency' => $displayCurrency,
+            'locked_payment_currency' => $ledger->lockedPaymentCurrency($reservation),
             'total_amount_usd' => $totalUsd,
             'paid_amount_usd' => $paidUsd,
             'balance_amount_usd' => $balanceUsd,

@@ -7,6 +7,7 @@ use App\Http\Requests\Public\CancelPublicReservationRequest;
 use App\Http\Requests\Public\FindReservationRequest;
 use App\Models\HotelSetting;
 use App\Models\Reservation;
+use App\Services\Notifications\ReservationNotificationService;
 use App\Services\Reservations\ReservationExpirationService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -94,16 +95,23 @@ class CustomerPortalController extends Controller
         DB::transaction(function () use ($reservation, $validated): void {
             $reservation->refresh();
 
-            if ($reservation->status !== Reservation::STATUS_PENDING) {
+            if (! $reservation->canBeCancelled()) {
                 throw ValidationException::withMessages([
                     'cancellation_reason' => __('public.messages.only_pending_cancel'),
                 ]);
             }
 
+            $reason = trim((string) ($validated['cancellation_reason'] ?? ''));
+            $cancelNote = 'Cliente solicito anulacion desde el portal publico el '.now()->format('d/m/Y H:i').'.';
+            if ($reason !== '') {
+                $cancelNote .= ' Motivo: '.$reason;
+            }
+
             $reservation->update([
                 'status' => Reservation::STATUS_CANCELLED,
                 'cancelled_at' => now(),
-                'cancellation_reason' => $validated['cancellation_reason'] ?? null,
+                'cancellation_reason' => $reason !== '' ? $reason : null,
+                'internal_notes' => trim(collect([$reservation->internal_notes, $cancelNote])->filter()->implode("\n")),
             ]);
 
             $room = $reservation->room;
@@ -112,6 +120,12 @@ class CustomerPortalController extends Controller
                 $room->update(['status' => 'available']);
             }
         });
+
+        try {
+            app(ReservationNotificationService::class)->customerCancelledReservation($reservation->fresh(['customer', 'room.roomType', 'roomType']));
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
 
         session()->forget(self::SESSION_KEY);
 

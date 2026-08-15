@@ -17,6 +17,7 @@ class Room extends Model
         'floor',
         'description',
         'internal_notes',
+        'gallery_images',
         'status',
         'is_active',
     ];
@@ -24,6 +25,7 @@ class Room extends Model
     protected function casts(): array
     {
         return [
+            'gallery_images' => 'array',
             'is_active' => 'boolean',
         ];
     }
@@ -36,5 +38,18 @@ class Room extends Model
     public function reservations(): HasMany
     {
         return $this->hasMany(Reservation::class);
+    }
+
+    public function publicGalleryImages(): array
+    {
+        $images = collect($this->gallery_images ?? [])
+            ->filter(fn ($image): bool => is_string($image) && trim($image) !== '')
+            ->values();
+
+        if ($images->isNotEmpty()) {
+            return $images->unique()->take(8)->values()->all();
+        }
+
+        return $this->roomType?->publicGalleryImages() ?? [];
     }
 }

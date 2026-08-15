@@ -10,6 +10,11 @@
             ? 'https://wa.me/'.$whatsapp.'?text='.rawurlencode('Hola, quiero consultar disponibilidad de '.$roomType->name.' en '.$hotelSetting->hotel_name.'.')
             : null;
         $galleryImages = $roomType->publicGalleryImages();
+        $promotionLabel = $roomType->public_promotion
+            ? ($roomType->public_promotion->discount_type === 'percentage'
+                ? rtrim(rtrim(number_format((float) $roomType->public_promotion->discount_value, 2, '.', ''), '0'), '.').'%'
+                : 'Descuento directo')
+            : null;
     @endphp
 
     <section class="page-hero-simple page-hero-room">
@@ -39,12 +44,11 @@
                 <div class="col-lg-5" data-reveal>
                     <div class="detail-panel room-detail-panel">
                         <div class="price-block">
-                            <span class="section-kicker">{{ __('public.rooms.detail_rate') }}</span>
-                            <div class="detail-price">Bs. {{ number_format((float) $roomType->public_final_price, 2, '.', '') }}</div>
-                            <div class="small text-muted mt-2">{{ __('public.rooms.price_registered') }}: Bs. {{ number_format((float) ($roomType->price_bob ?? $roomType->base_price), 2, '.', '') }} / $us {{ number_format((float) ($roomType->price_usd ?? 0), 2, '.', '') }}</div>
+                            <span class="section-kicker">Reserva guiada</span>
+                            <div class="detail-price">Consulta disponibilidad</div>
                             @if ($roomType->public_promotion)
                                 <div class="promo-badge">{{ __('public.rooms.promo_active') }}: {{ $roomType->public_promotion->name }}</div>
-                                <div class="small text-muted mt-2">{{ __('public.rooms.base_price') }}: Bs. {{ number_format((float) $roomType->base_price, 2, '.', '') }}</div>
+                                <div class="small text-muted mt-2">Oferta: {{ $promotionLabel }}</div>
                             @endif
                         </div>
                         <div class="detail-meta">
@@ -54,7 +58,7 @@
                             <div><strong>{{ __('public.rooms.available_rooms') }}:</strong> {{ $roomType->available_rooms_count }}</div>
                         </div>
                         <div class="hero-actions mt-4">
-                            <a href="{{ route('public.booking.create', ['room_type_id' => $roomType->id]) }}" class="btn btn-public-primary">{{ __('public.rooms.book_this_room') }}</a>
+                            <a href="{{ route('public.rooms.index') }}" class="btn btn-public-primary">Ver habitaciones disponibles</a>
                             @if ($whatsAppUrl)
                                 <a href="{{ $whatsAppUrl }}" target="_blank" rel="noopener" class="btn btn-public-outline">{{ __('public.rooms.book_whatsapp') }}</a>
                             @endif
@@ -97,7 +101,7 @@
                                     <strong>{{ $promotion->name }}</strong>
                                     <p class="mb-2">{{ $promotion->description ?: __('public.rooms.promotion_fallback') }}</p>
                                     <span class="promo-badge">
-                                        {{ $promotion->discount_type === 'percentage' ? rtrim(rtrim(number_format((float) $promotion->discount_value, 2, '.', ''), '0'), '.').'%' : 'Bs. '.number_format((float) $promotion->discount_value, 2, '.', '') }} {{ __('public.rooms.discount_suffix') }}
+                                        {{ $promotion->discount_type === 'percentage' ? rtrim(rtrim(number_format((float) $promotion->discount_value, 2, '.', ''), '0'), '.').'%' : 'Descuento directo' }} {{ __('public.rooms.discount_suffix') }}
                                     </span>
                                 </div>
                             </div>

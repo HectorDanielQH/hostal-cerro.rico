@@ -22,7 +22,10 @@ class UpdateRoomRequest extends FormRequest
             'floor' => ['nullable', 'string', 'max:50'],
             'description' => ['nullable', 'string'],
             'internal_notes' => ['nullable', 'string'],
-            'status' => ['required', 'in:available,occupied,reserved'],
+            'gallery_images' => ['nullable', 'array', 'max:8'],
+            'gallery_images.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'clear_gallery_images' => ['nullable', 'boolean'],
+            'status' => ['required', 'in:available,occupied,reserved,cleaning,maintenance'],
             'is_active' => ['nullable', 'boolean'],
         ];
     }

@@ -5,6 +5,7 @@ use App\Http\Controllers\AdminLte\AnnouncementController;
 use App\Http\Controllers\AdminLte\CashRegisterController;
 use App\Http\Controllers\AdminLte\CustomerController;
 use App\Http\Controllers\AdminLte\FrontDeskController;
+use App\Http\Controllers\AdminLte\HostingController;
 use App\Http\Controllers\AdminLte\NotificationController;
 use App\Http\Controllers\AdminLte\PromotionController;
 use App\Http\Controllers\AdminLte\PaymentController;
@@ -24,7 +25,7 @@ Route::middleware(['web', 'auth'])
     ->name('adminlte.')
     ->group(function (): void {
         Route::get('dashboard', [DashboardController::class, 'index'])
-            ->middleware(['permission:dashboard.ver', 'role:admin|manager|general_manager|receptionist'])
+            ->middleware(['permission:dashboard.ver', 'role:admin|manager|general_manager'])
             ->name('dashboard');
 
         Route::prefix('profile')
@@ -78,6 +79,14 @@ Route::middleware(['web', 'auth'])
         Route::put('settings', [SettingsController::class, 'update'])
             ->middleware('permission:configuracion.editar')
             ->name('settings.update');
+
+        Route::get('hosting', [HostingController::class, 'index'])
+            ->middleware('role:admin')
+            ->name('hosting.index');
+
+        Route::post('hosting/run', [HostingController::class, 'run'])
+            ->middleware('role:admin')
+            ->name('hosting.run');
 
         Route::prefix('announcements')
             ->name('announcements.')
@@ -438,6 +447,14 @@ Route::middleware(['web', 'auth'])
                     ->middleware('permission:habitaciones.ver')
                     ->name('rooms-status');
 
+                Route::get('customers/{customer}/summary', [FrontDeskController::class, 'customerSummary'])
+                    ->middleware('permission:reservas.ver|clientes.ver')
+                    ->name('customers.summary');
+
+                Route::put('reservations/{reservation}/guests', [FrontDeskController::class, 'updateReservationGuests'])
+                    ->middleware('permission:reservas.editar|clientes.editar')
+                    ->name('reservations.guests');
+
                 Route::post('reservations/{reservation}/check-in', [FrontDeskController::class, 'checkIn'])
                     ->middleware('permission:reservas.checkin')
                     ->name('check-in');
@@ -445,6 +462,18 @@ Route::middleware(['web', 'auth'])
                 Route::post('reservations/{reservation}/check-out', [FrontDeskController::class, 'checkOut'])
                     ->middleware('permission:reservas.checkout')
                     ->name('check-out');
+
+                Route::post('reservations/{reservation}/extend', [FrontDeskController::class, 'extendStay'])
+                    ->middleware('permission:reservas.editar')
+                    ->name('reservations.extend');
+
+                Route::put('reservations/{reservation}/dates', [FrontDeskController::class, 'updateReservationDates'])
+                    ->middleware('permission:reservas.editar')
+                    ->name('reservations.dates');
+
+                Route::post('reservations/{reservation}/cancellation-review', [FrontDeskController::class, 'reviewCancellation'])
+                    ->middleware('permission:reservas.ver')
+                    ->name('reservations.cancellation-review');
 
                 Route::patch('rooms/{room}/status', [FrontDeskController::class, 'updateRoomStatus'])
                     ->middleware('permission:habitaciones.estado')

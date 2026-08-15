@@ -5,6 +5,7 @@ namespace App\Http\Controllers\AdminLte;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Reservation;
+use App\Services\Reception\DailyLedgerService;
 use App\Services\Reservations\ReservationExpirationService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
@@ -13,7 +14,7 @@ use Illuminate\Support\Facades\Schema;
 
 class DashboardController extends Controller
 {
-    public function index(): View
+    public function index(DailyLedgerService $dailyLedgerService): View
     {
         app(ReservationExpirationService::class)->expirePendingReservations();
 
@@ -41,6 +42,7 @@ class DashboardController extends Controller
             'pendingPayments' => $this->pendingPayments(),
             'cashRegister' => $this->currentCashRegister(),
             'assignedWorkShift' => $this->assignedWorkShift(),
+            'dailyLedger' => $dailyLedgerService->build($today),
         ]);
     }
 

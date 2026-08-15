@@ -39,7 +39,7 @@
         <div class="reservations-hero__content">
             <span class="reservations-kicker">Operacion de reservas</span>
             <h1>Reservas</h1>
-            <p>Gestiona solicitudes, confirmaciones, anticipos, check-in y check-out con una lectura rapida del estado operativo y financiero.</p>
+            <p>Gestiona solicitudes, confirmaciones, anticipos, entradas y salidas con una lectura rapida del estado operativo y financiero.</p>
         </div>
 
         <div class="reservations-hero__actions">
@@ -162,7 +162,7 @@
                         <div><span>Total</span><strong>0</strong><small>reservas activas</small></div>
                         <div><span>Pendientes</span><strong>0</strong><small>por confirmar</small></div>
                         <div><span>Confirmadas</span><strong>0</strong><small>con habitacion</small></div>
-                        <div><span>Ocupadas</span><strong>0</strong><small>check-in realizado</small></div>
+                        <div><span>Ocupadas</span><strong>0</strong><small>entrada registrada</small></div>
                     </div>
 
                     <div class="reservation-agenda-grid" id="reservation-agenda-grid">
@@ -1972,6 +1972,65 @@
                 width: 100%;
             }
         }
+
+        @if (request()->boolean('embed'))
+            body {
+                background: #fbfaf8 !important;
+                overflow: hidden !important;
+            }
+
+            .app-header,
+            .app-sidebar,
+            .app-footer,
+            .content-header,
+            .reservations-hero,
+            .reservation-stat,
+            .reservations-panel,
+            #reservation-agenda-modal,
+            #edit-reservation-modal,
+            #availability-board-modal,
+            #reservation-payments-modal {
+                display: none !important;
+            }
+
+            .app-wrapper,
+            .content-wrapper,
+            .content,
+            .container-fluid {
+                min-height: 100vh !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #fbfaf8 !important;
+            }
+
+            #create-reservation-modal {
+                display: block !important;
+                position: static !important;
+                opacity: 1 !important;
+            }
+
+            #create-reservation-modal .modal-dialog {
+                width: 100% !important;
+                max-width: 100% !important;
+                height: 100vh !important;
+                margin: 0 !important;
+            }
+
+            #create-reservation-modal .modal-content {
+                height: 100vh !important;
+                max-height: 100vh !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+            }
+
+            #create-reservation-modal .modal-header .btn-close {
+                display: none !important;
+            }
+
+            .modal-backdrop {
+                display: none !important;
+            }
+        @endif
     </style>
 @endpush
 
@@ -1992,6 +2051,7 @@
             const paymentStoreUrl = '{{ route('adminlte.payments.store') }}';
             const requiresOpenCashRegister = @json($requiresOpenCashRegister);
             const hasOpenCashRegister = @json($hasOpenCashRegister);
+            const isEmbeddedReservation = @json(request()->boolean('embed'));
             const openCashRegisterUrl = @json(route('adminlte.cash-registers.index'));
             const roomsCatalog = @json($roomsCatalog);
             const promotionsCatalog = @json($promotionsCatalog);
@@ -2224,6 +2284,11 @@
                 createModal?.show();
                 await refreshReservationContext(createForm);
             });
+
+            const initialRoomId = new URLSearchParams(window.location.search).get('room_id');
+            if (initialRoomId && roomsMap.has(String(initialRoomId))) {
+                await openCreateReservationForRoom(initialRoomId);
+            }
 
             document.getElementById('open-reservation-agenda-modal')?.addEventListener('click', async () => {
                 reservationAgendaModal?.show();
@@ -2871,6 +2936,17 @@
                 toggleManualDiscountFields(form);
             }
 
+            async function openCreateReservationForRoom(roomId) {
+                resetReservationForm(createForm, true);
+                createForm.querySelector('[name="room_id"]').value = roomId;
+                createForm.querySelector('[name="room_id"]').dispatchEvent(new Event('change', { bubbles: true }));
+                setCreateReservationStep(1);
+                createModal?.show();
+                await refreshReservationContext(createForm);
+
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+
             function fillEditForm(reservation) {
                 resetReservationForm(editForm);
                 editForm.action = reservation.update_url;
@@ -2928,7 +3004,7 @@
                         dropdownParent: $modal.length ? $modal : $(document.body),
                         placeholder: 'Buscar cliente o huesped',
                         allowClear: false,
-                        minimumInputLength: 2,
+                        minimumInputLength: 3,
                         ajax: {
                             url: customerSearchUrl,
                             dataType: 'json',
@@ -2947,7 +3023,7 @@
                         templateSelection: (customer) => escapeHtml(customerSelectionLabel(customer)),
                         escapeMarkup: (markup) => markup,
                         language: {
-                            inputTooShort: () => 'Escribe al menos 2 letras o numeros',
+                            inputTooShort: () => 'Escribe al menos 3 letras o numeros',
                             noResults: () => 'Sin resultados',
                             searching: () => 'Buscando...',
                             loadingMore: () => 'Cargando mas clientes...',
@@ -3099,7 +3175,7 @@
                     <div><span>Total</span><strong>${summary.total || 0}</strong><small>reservas activas</small></div>
                     <div><span>Pendientes</span><strong>${summary.pending || 0}</strong><small>por confirmar</small></div>
                     <div><span>Confirmadas</span><strong>${summary.confirmed || 0}</strong><small>con habitacion</small></div>
-                    <div><span>Ocupadas</span><strong>${summary.checked_in || 0}</strong><small>check-in realizado</small></div>
+                    <div><span>Ocupadas</span><strong>${summary.checked_in || 0}</strong><small>entrada registrada</small></div>
                 `;
             }
 
@@ -3544,6 +3620,10 @@
                     timer: 1800,
                     showConfirmButton: false,
                 });
+
+                if (isEmbeddedReservation && form === createForm && window.parent && window.parent !== window) {
+                    window.parent.postMessage({ type: 'front-desk-reservation-created' }, window.location.origin);
+                }
             }
 
             async function processReservationAction(url, confirmationText, options = {}) {

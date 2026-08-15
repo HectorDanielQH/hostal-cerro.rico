@@ -16,6 +16,7 @@ use App\Services\Reports\IncomeReportService;
 use App\Services\Reports\OccupancyReportService;
 use App\Services\Reports\PaymentReportService;
 use App\Services\Reports\ReservationReportService;
+use App\Support\SimpleXlsxWriter;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -46,7 +47,7 @@ class ReportController extends Controller
         $cashRegisterReport = $this->cashRegisterReportService->generate($baseFilters);
         $occupancyReport = $this->occupancyReportService->generate($baseFilters);
         $customerReport = $this->customerReportService->generate($baseFilters);
-        $hotelChamberReport = $this->hotelChamberReportService->generate($this->defaultDailyFilters());
+        $hotelChamberReport = $this->hotelChamberReportService->generate($this->defaultDateFilters());
 
         return view('adminlte.reports.index', [
             'filterOptions' => $this->filterOptions(),
@@ -58,7 +59,7 @@ class ReportController extends Controller
             'customerReport' => $customerReport,
             'hotelChamberReport' => $hotelChamberReport,
             'defaultFilters' => $baseFilters,
-            'defaultDailyFilters' => $this->defaultDailyFilters(),
+            'defaultDailyFilters' => $this->defaultDateFilters(),
             'reportEndpoints' => [
                 'reservations' => route('adminlte.reports.reservations'),
                 'income' => route('adminlte.reports.income'),
@@ -264,68 +265,26 @@ class ReportController extends Controller
 
         $report = $this->hotelChamberReportService->generate($filters);
 
-        return $this->csvDownload(
-            'camara_hotelera_'.($filters['date_from'] ?? now()->toDateString()).'_'.($filters['date_to'] ?? now()->toDateString()).'.csv',
+        return $this->xlsxDownload(
+            'HOTELERA_'.($filters['date_from'] ?? now()->toDateString()).'_'.($filters['date_to'] ?? now()->toDateString()).'.xlsx',
             [
-                'Codigo reserva',
-                'Huesped',
-                'Tipo documento',
-                'Numero documento',
-                'Nacionalidad',
-                'Pais',
-                'Ciudad',
-                'Telefono',
-                'Correo',
-                'Extranjero',
-                'Habitacion',
-                'Tipo habitacion',
-                'Desde',
-                'Hasta',
-                'Check-in real',
-                'Check-out real',
-                'Noches reservadas',
-                'Noches reales',
-                'Adultos',
-                'Ninos',
-                'Total huespedes',
-                'Estado',
-                'Hospedado actualmente',
-                'Se paso de salida',
-                'Extension detectada',
-                'Observacion',
-                'Origen',
-                'Solicitudes especiales',
-            ],
-            $report['rows']->map(fn (array $row): array => [
-                $row['reservation_code'],
-                $row['guest_name'],
-                $row['document_type'],
-                $row['document_number'],
-                $row['nationality'],
-                $row['country'],
-                $row['city'],
-                $row['phone'],
-                $row['email'],
-                $row['is_foreign'] ? 'Si' : 'No',
-                $row['room_number'],
-                $row['room_type'],
-                $row['check_in'],
-                $row['check_out'],
-                $row['checked_in_at'],
-                $row['checked_out_at'],
-                $row['reserved_nights'],
-                $row['actual_nights'],
-                $row['adults'],
-                $row['children'],
-                $row['total_guests'],
-                $row['status_label'],
-                $row['is_currently_hosted'] ? 'Si' : 'No',
-                $row['is_overstayed'] ? 'Si' : 'No',
-                $row['is_extended'] ? 'Si' : 'No',
-                $row['operational_observation'],
-                $row['source'],
-                $row['special_requests'],
-            ])->all()
+                [
+                    'title' => 'informe de servicios',
+                    'rows' => array_merge([$report['official_headings']], $report['official_rows']->all()),
+                    'columns' => [1 => 14, 2 => 14, 3 => 20, 4 => 18, 5 => 16, 6 => 16, 7 => 14, 8 => 24, 9 => 36, 10 => 18],
+                ],
+                [
+                    'title' => 'generales',
+                    'rows' => array_merge([$report['general_headings']], $report['general_rows']),
+                    'columns' => [1 => 14, 2 => 16, 3 => 28, 4 => 28, 5 => 32, 6 => 18, 7 => 24, 8 => 18, 9 => 18, 10 => 18, 11 => 18, 12 => 22, 13 => 28],
+                ],
+                [
+                    'title' => 'datos',
+                    'rows' => $report['catalog_rows'],
+                    'columns' => [1 => 12, 2 => 42, 3 => 48],
+                    'merges' => ['A1:C1', 'A13:C13'],
+                ],
+            ]
         );
     }
 
@@ -338,8 +297,8 @@ class ReportController extends Controller
             'reservationStatuses' => [
                 Reservation::STATUS_PENDING => 'Pendiente',
                 Reservation::STATUS_CONFIRMED => 'Confirmada',
-                Reservation::STATUS_CHECKED_IN => 'Check-in',
-                Reservation::STATUS_CHECKED_OUT => 'Check-out',
+                Reservation::STATUS_CHECKED_IN => 'Entrada',
+                Reservation::STATUS_CHECKED_OUT => 'Salida',
                 Reservation::STATUS_CANCELLED => 'Cancelada',
                 Reservation::STATUS_EXPIRED => 'Expirada',
                 Reservation::STATUS_NO_SHOW => 'No se presento',
@@ -479,6 +438,18 @@ class ReportController extends Controller
             fclose($handle);
         }, $filename, [
             'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    private function xlsxDownload(string $filename, array $sheets)
+    {
+        $content = app(SimpleXlsxWriter::class)->make($sheets);
+
+        return response($content, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Content-Length' => (string) strlen($content),
+            'Cache-Control' => 'max-age=0, no-cache, no-store, must-revalidate',
         ]);
     }
 

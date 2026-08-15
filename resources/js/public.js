@@ -24,9 +24,71 @@ const initPublicSite = () => {
     const announcementsModalElement = document.querySelector('[data-public-announcements-modal]')
     const roomGalleries = document.querySelectorAll('[data-public-room-gallery]')
     const countrySelects = document.querySelectorAll('[data-country-select]')
+    const citySelects = document.querySelectorAll('[data-city-select]')
+    const whatsappCodeSelects = document.querySelectorAll('[data-whatsapp-code-select]')
+    const currencyRoot = document.querySelector('[data-public-currency-root]')
     const prefersMobileHeroImage = heroMedia?.dataset.mobileHeroImage === 'true'
     const mobileMediaQuery = window.matchMedia('(max-width: 767.98px)')
     const shouldSkipHeavyHeroMedia = prefersMobileHeroImage && mobileMediaQuery.matches
+
+    const detectVisitorCurrency = () => {
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || ''
+        const languages = navigator.languages?.length ? navigator.languages : [navigator.language].filter(Boolean)
+        const isBolivia = timezone === 'America/La_Paz'
+            || languages.some((language) => /(^|-)BO$/i.test(language))
+
+        return isBolivia ? 'BOB' : 'USD'
+    }
+
+    const formatCurrencyText = (amount, currency) => {
+        const value = Number(amount || 0)
+        const symbol = currency === 'USD' ? '$us ' : 'Bs. '
+
+        return `${symbol}${value.toFixed(2)}`
+    }
+
+    const syncPublicCurrency = () => {
+        if (!currencyRoot) {
+            return
+        }
+
+        const currency = detectVisitorCurrency()
+        currencyRoot.dataset.publicCurrency = currency
+        document.documentElement.dataset.publicCurrency = currency
+        document.body.classList.toggle('is-visitor-usd', currency === 'USD')
+
+        document.querySelectorAll('[data-money-bob][data-money-usd]').forEach((element) => {
+            const preferredValue = currency === 'USD' ? element.dataset.moneyUsd : element.dataset.moneyBob
+            const fallbackValue = currency === 'USD' ? element.dataset.moneyBob : element.dataset.moneyUsd
+            const preferredAmount = Number(preferredValue || 0)
+            const fallbackCurrency = currency === 'USD' ? 'BOB' : 'USD'
+
+            if (preferredAmount > 0) {
+                element.textContent = formatCurrencyText(preferredAmount, currency)
+                return
+            }
+
+            element.textContent = formatCurrencyText(fallbackValue, fallbackCurrency)
+        })
+
+        document.querySelectorAll('[data-money-context]').forEach((element) => {
+            element.textContent = currency === 'USD'
+                ? (element.dataset.usdText || element.textContent)
+                : (element.dataset.bobText || element.textContent)
+        })
+
+        const paymentCurrencySelect = document.getElementById('booking-payment-currency')
+
+        if (paymentCurrencySelect && currency === 'USD' && paymentCurrencySelect.tagName === 'INPUT') {
+            paymentCurrencySelect.value = 'USD'
+            paymentCurrencySelect.dispatchEvent(new Event('change', { bubbles: true }))
+        } else if (paymentCurrencySelect && currency === 'USD' && paymentCurrencySelect.querySelector('option[value="USD"]')) {
+            paymentCurrencySelect.value = 'USD'
+            paymentCurrencySelect.dispatchEvent(new Event('change', { bubbles: true }))
+        }
+    }
+
+    syncPublicCurrency()
 
     if (heroVideoSource && !shouldSkipHeavyHeroMedia) {
         heroVideoSource.src = heroVideoSource.dataset.src
@@ -207,6 +269,9 @@ const initPublicSite = () => {
     const countryDisplayNames = typeof Intl?.DisplayNames === 'function'
         ? new Intl.DisplayNames(['es'], { type: 'region' })
         : null
+    const englishCountryDisplayNames = typeof Intl?.DisplayNames === 'function'
+        ? new Intl.DisplayNames(['en'], { type: 'region' })
+        : null
 
     const hydrateCountryOptionsFromApi = async (select) => {
         const apiUrl = select.dataset.countryApi
@@ -288,6 +353,127 @@ const initPublicSite = () => {
                 templateSelection: countryTemplate,
                 dropdownParent: $select.closest('.booking-step-panel'),
             })
+        })
+    }
+
+    if (whatsappCodeSelects.length && typeof $.fn.select2 === 'function') {
+        whatsappCodeSelects.forEach((select) => {
+            const $select = $(select)
+
+            if ($select.data('select2')) {
+                $select.trigger('change.select2')
+                return
+            }
+
+            $select.select2({
+                width: '100%',
+                minimumResultsForSearch: 8,
+                templateResult: countryTemplate,
+                templateSelection: countryTemplate,
+                dropdownParent: $select.closest('.booking-step-panel'),
+            })
+        })
+    }
+
+    const hydrateCityOptionsFromApi = async (select) => {
+        const apiUrl = select.dataset.cityApi
+        const countrySource = document.querySelector(select.dataset.countrySource)
+        const selectedCountry = countrySource?.value || 'Bolivia'
+        const selectedCountryCode = countrySource?.selectedOptions?.[0]?.dataset?.countryCode
+        const apiCountry = selectedCountryCode && englishCountryDisplayNames
+            ? englishCountryDisplayNames.of(selectedCountryCode)
+            : selectedCountry
+        const selectedCity = select.dataset.selectedCity || select.value || ''
+
+        if (!apiUrl || !apiCountry) {
+            return
+        }
+
+        const controller = new AbortController()
+        const timeoutId = window.setTimeout(() => controller.abort(), 8000)
+
+        select.disabled = true
+
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ country: apiCountry }),
+                signal: controller.signal,
+            })
+
+            if (!response.ok) {
+                throw new Error('No se pudo cargar la lista de ciudades.')
+            }
+
+            const payload = await response.json()
+            const cities = Array.isArray(payload.data) ? payload.data : []
+            const fragment = document.createDocumentFragment()
+            let selectedExists = false
+
+            cities
+                .filter(Boolean)
+                .sort((first, second) => String(first).localeCompare(String(second), 'es'))
+                .forEach((city) => {
+                    const isSelected = normalizeCountryName(city) === normalizeCountryName(selectedCity)
+                    fragment.appendChild(new Option(city, city, false, isSelected))
+
+                    if (isSelected) {
+                        selectedExists = true
+                    }
+                })
+
+            if (!selectedExists && selectedCity) {
+                fragment.prepend(new Option(selectedCity, selectedCity, false, true))
+            }
+
+            if (!fragment.childNodes.length) {
+                fragment.appendChild(new Option(selectedCity || selectedCountry, selectedCity || selectedCountry, false, true))
+            }
+
+            select.replaceChildren(fragment)
+        } catch (error) {
+            console.warn('No se pudo cargar ciudades desde la API publica. Se usara la ciudad escrita previamente.', error)
+
+            if (!select.options.length && selectedCity) {
+                select.appendChild(new Option(selectedCity, selectedCity, false, true))
+            }
+        } finally {
+            select.disabled = false
+            window.clearTimeout(timeoutId)
+
+            const $select = $(select)
+            if ($select.data('select2')) {
+                $select.trigger('change.select2')
+            }
+        }
+    }
+
+    if (citySelects.length && typeof $.fn.select2 === 'function') {
+        citySelects.forEach(async (select) => {
+            const $select = $(select)
+
+            $select.select2({
+                width: '100%',
+                placeholder: select.dataset.placeholder || 'Selecciona tu ciudad',
+                tags: true,
+                dropdownParent: $select.closest('.booking-step-panel'),
+            })
+
+            await hydrateCityOptionsFromApi(select)
+
+            const countrySource = document.querySelector(select.dataset.countrySource)
+            if (countrySource) {
+                $(countrySource).on('select2:select select2:clear change', async () => {
+                    select.dataset.selectedCity = ''
+                    select.replaceChildren(new Option('Cargando ciudades...', '', false, false))
+                    $select.val(null).trigger('change.select2')
+                    await hydrateCityOptionsFromApi(select)
+                })
+            }
         })
     }
 

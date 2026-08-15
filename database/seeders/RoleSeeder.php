@@ -17,10 +17,10 @@ class RoleSeeder extends Seeder
         $hasLabel = Schema::hasColumn(config('permission.table_names.roles'), 'label');
 
         $roles = [
-            'admin' => 'Administrator',
+            'admin' => 'Administrador',
+            'general_manager' => 'Gerente General',
             'manager' => 'Gerente',
             'receptionist' => 'Recepcionista',
-            'client' => 'Cliente',
         ];
 
         foreach ($roles as $name => $label) {
@@ -37,15 +37,15 @@ class RoleSeeder extends Seeder
         }
 
         $admin = Role::findByName('admin', 'web');
+        $generalManager = Role::findByName('general_manager', 'web');
         $manager = Role::findByName('manager', 'web');
         $receptionist = Role::findByName('receptionist', 'web');
-        $client = Role::findByName('client', 'web');
 
         $allPermissions = Permission::query()->pluck('name')->all();
 
         $admin->syncPermissions($allPermissions);
 
-        $manager->syncPermissions([
+        $managementPermissions = [
             'dashboard.ver',
             'configuracion.ver',
             'tipos_habitacion.ver',
@@ -68,7 +68,10 @@ class RoleSeeder extends Seeder
             'reportes.exportar',
             'perfil.ver',
             'perfil.editar',
-        ]);
+        ];
+
+        $generalManager->syncPermissions($managementPermissions);
+        $manager->syncPermissions($managementPermissions);
 
         $receptionist->syncPermissions([
             'dashboard.ver',
@@ -97,17 +100,16 @@ class RoleSeeder extends Seeder
             'perfil.editar',
         ]);
 
-        $client->syncPermissions([
-            'reservas.crear',
-            'reservas.ver_propias',
-            'reservas.cancelar',
-            'pagos.ver_propios',
-            'pagos.realizar',
-            'pagos.subir_comprobante',
-            'clientes.ver_propios',
-            'perfil.ver',
-            'perfil.editar',
-        ]);
+        $legacyClientRole = Role::query()
+            ->where('name', 'client')
+            ->where('guard_name', 'web')
+            ->first();
+
+        if ($legacyClientRole) {
+            $legacyClientRole->users()->detach();
+            $legacyClientRole->permissions()->detach();
+            $legacyClientRole->delete();
+        }
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
     }

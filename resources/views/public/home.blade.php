@@ -137,8 +137,8 @@
                     </div>
                     <div class="hero-facts">
                         <div class="hero-fact">
-                            <strong>{{ $featuredRoomTypes->count() > 0 ? $featuredRoomTypes->count() : '5+' }}</strong>
-                            <span>{{ __('public.home.hero_fact_room_types') }}</span>
+                            <strong>{{ $availableRoomsCount > 0 ? $availableRoomsCount : '0' }}</strong>
+                            <span>Habitaciones disponibles</span>
                         </div>
                         <div class="hero-fact">
                             <strong>{{ $activePromotions->count() > 0 ? $activePromotions->count() : '24/7' }}</strong>
@@ -267,60 +267,94 @@
 
     --}}
 
-    <section class="section-block section-soft">
+    <section class="section-block section-soft home-sales-rooms">
         <div class="container">
-            <div class="section-heading section-heading-split">
-                <div>
-                    <span class="section-kicker">{{ __('public.home.featured_rooms_kicker') }}</span>
-                    <h2>{{ __('public.home.featured_rooms_title') }}</h2>
+            @if (($availableRoomsByType ?? collect())->isNotEmpty())
+                <div class="section-heading section-heading-split">
+                    <div>
+                        <span class="section-kicker">{{ __('public.home.available_rooms_kicker') }}</span>
+                        <h2>{{ __('public.home.available_rooms_title') }}</h2>
+                        <p>{{ __('public.home.available_rooms_text') }}</p>
+                    </div>
+                    <div class="home-sales-rooms__cta">
+                        <span><i class="bi bi-shield-check"></i> {{ __('public.home.rooms_sales_note') }}</span>
+                        <a href="{{ route('public.rooms.index') }}" class="btn btn-public-outline">{{ __('public.home.view_all_rooms') }}</a>
+                    </div>
                 </div>
-                <a href="{{ route('public.rooms.index') }}" class="btn btn-public-outline">{{ __('public.home.view_all_rooms') }}</a>
-            </div>
-            <div class="showcase-grid">
-                @forelse ($featuredRoomTypes as $roomType)
-                    @php
-                        $galleryImages = $roomType->publicGalleryImages();
-                    @endphp
-                    <article class="public-card showcase-card" data-reveal>
-                        <div class="showcase-media">
-                            @if (count($galleryImages))
-                                <div class="public-room-gallery" data-public-room-gallery>
-                                    @foreach ($galleryImages as $image)
-                                        <img src="{{ asset('storage/'.$image) }}" alt="{{ $roomType->name }}" @class(['is-active' => $loop->first])>
-                                    @endforeach
-                                </div>
-                            @else
-                                <div class="placeholder-tile"><i class="bi bi-image"></i></div>
-                            @endif
-                            <div class="showcase-overlay">
-                                <span class="price-chip">Bs. {{ number_format((float) $roomType->public_final_price, 2, '.', '') }}</span>
-                            </div>
-                        </div>
-                        <div class="public-card-body">
-                            <div class="showcase-header">
+
+                <div class="home-room-type-showcase" data-reveal>
+                    @foreach ($availableRoomsByType as $group)
+                        @php
+                            $roomType = $group['roomType'];
+                            $rooms = $group['rooms'];
+                            $promotionLabel = $roomType?->public_promotion
+                                ? ($roomType->public_promotion->discount_type === 'percentage'
+                                    ? rtrim(rtrim(number_format((float) $roomType->public_promotion->discount_value, 2, '.', ''), '0'), '.').'%'
+                                    : 'Descuento directo')
+                                : null;
+                        @endphp
+                        <article class="home-room-type-block">
+                            <div class="home-room-type-block__head">
                                 <div>
-                                    <h3>{{ $roomType->name }}</h3>
-                                    <p>{{ \Illuminate\Support\Str::limit($roomType->description ?: __('public.home.room_card_fallback'), 120) }}</p>
+                                    <span class="section-kicker">{{ __('public.rooms.room_type_label') }}</span>
+                                    <h3>{{ $roomType?->name ?: 'Habitaciones' }}</h3>
+                                    <p>{{ \Illuminate\Support\Str::limit($roomType?->description ?: __('public.home.room_card_fallback'), 130) }}</p>
+                                </div>
+                                <div class="home-room-type-block__meta">
+                                    <span><i class="bi bi-stars"></i> {{ __('public.home.direct_booking_badge') }}</span>
+                                    <span><i class="bi bi-door-open"></i> {{ __('public.home.available_count', ['count' => $group['available_count']]) }}</span>
+                                    <span><i class="bi bi-people"></i> {{ __('public.home.max_guests', ['count' => $roomType?->max_guests ?? 0]) }}</span>
+                                    @if ($roomType?->public_promotion)
+                                        <span class="promo-badge">{{ $roomType->public_promotion->name }} - {{ $promotionLabel }}</span>
+                                    @endif
                                 </div>
                             </div>
-                            <div class="small text-muted mb-3">{{ __('public.home.reference_price') }}: Bs. {{ number_format((float) ($roomType->price_bob ?? $roomType->base_price), 2, '.', '') }} / $us {{ number_format((float) ($roomType->price_usd ?? 0), 2, '.', '') }}</div>
-                            <div class="room-meta">
-                                <span><i class="bi bi-people"></i> {{ __('public.home.max_guests', ['count' => $roomType->max_guests]) }}</span>
-                                <span><i class="bi bi-door-open"></i> {{ __('public.home.available_count', ['count' => $roomType->available_rooms_count]) }}</span>
+
+                            <div @class([
+                                'home-room-cards',
+                                'home-room-cards--single' => $rooms->count() === 1,
+                                'home-room-cards--pair' => $rooms->count() === 2,
+                            ])>
+                                @foreach ($rooms as $room)
+                                    @php
+                                        $galleryImages = $room->public_gallery_images ?? [];
+                                    @endphp
+                                    <article class="home-room-card">
+                                        <div class="home-room-card__media">
+                                            @if (count($galleryImages))
+                                                <div class="public-room-gallery" data-public-room-gallery>
+                                                    @foreach ($galleryImages as $image)
+                                                        <img src="{{ asset('storage/'.$image) }}" alt="{{ $roomType?->name }} {{ $room->number }}" @class(['is-active' => $loop->first])>
+                                                    @endforeach
+                                                </div>
+                                            @else
+                                                <div class="placeholder-tile"><i class="bi bi-image"></i></div>
+                                            @endif
+                                            <span>{{ __('public.home.ready_available') }}</span>
+                                            <em><i class="bi bi-images"></i> {{ __('public.home.photo_gallery_badge') }}</em>
+                                        </div>
+                                        <div class="home-room-card__body">
+                                            <small>{{ __('public.home.physical_room') }}</small>
+                                            <strong>{{ $room->number }}</strong>
+                                            @if ($room->floor)
+                                                <span>{{ $room->floor }}</span>
+                                            @endif
+                                            <p>{{ \Illuminate\Support\Str::limit($room->description ?: ($roomType?->description ?: __('public.home.room_card_fallback')), 78) }}</p>
+                                            <div class="home-room-card__actions">
+                                                <a href="{{ route('public.booking.create', ['room_id' => $room->id]) }}" class="btn btn-public-primary btn-sm">{{ __('public.home.book_this_room') }}</a>
+                                                @if ($roomType)
+                                                    <a href="{{ route('public.rooms.show', $roomType) }}" class="btn btn-public-outline btn-sm">{{ __('public.home.detail') }}</a>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </article>
+                                @endforeach
                             </div>
-                            @if ($roomType->public_promotion)
-                                <div class="promo-badge mt-3">{{ __('public.home.active_promo') }}: {{ $roomType->public_promotion->name }}</div>
-                            @endif
-                            <div class="showcase-actions">
-                                <a href="{{ route('public.booking.create', ['room_type_id' => $roomType->id]) }}" class="btn btn-public-primary">{{ __('public.home.book') }}</a>
-                                <a href="{{ route('public.rooms.show', $roomType) }}" class="btn btn-public-ghost">{{ __('public.home.detail') }}</a>
-                            </div>
-                        </div>
-                    </article>
-                @empty
-                    <div class="empty-state-public">{{ __('public.home.rooms_empty') }}</div>
-                @endforelse
-            </div>
+                        </article>
+                    @endforeach
+                </div>
+            @endif
+
         </div>
     </section>
 
@@ -335,10 +369,17 @@
             </div>
             <div class="mosaic-grid">
                 @forelse ($activePromotions as $promotion)
+                    @php
+                        $publicPromotionDescription = preg_replace(
+                            '/(?:Bs\.?\s*\d+(?:[.,]\d+)?|\$us\s*\d+(?:[.,]\d+)?)/i',
+                            'descuento especial',
+                            (string) ($promotion->description ?: __('public.home.promotion_fallback'))
+                        );
+                    @endphp
                     <article class="mosaic-card" data-reveal>
-                        <span class="promo-badge">{{ $promotion->discount_type === 'percentage' ? rtrim(rtrim(number_format((float) $promotion->discount_value, 2, '.', ''), '0'), '.').'%' : 'Bs. '.number_format((float) $promotion->discount_value, 2, '.', '') }} {{ __('public.home.discount_suffix') }}</span>
+                        <span class="promo-badge">{{ $promotion->discount_type === 'percentage' ? rtrim(rtrim(number_format((float) $promotion->discount_value, 2, '.', ''), '0'), '.').'%' : 'Descuento directo' }} {{ __('public.home.discount_suffix') }}</span>
                         <h3>{{ $promotion->name }}</h3>
-                        <p>{{ $promotion->description ?: __('public.home.promotion_fallback') }}</p>
+                        <p>{{ $publicPromotionDescription }}</p>
                         <div class="promotion-dates">
                             {{ __('public.promotions.validity') }}:
                             {{ $promotion->starts_at ? $promotion->starts_at->format('d/m/Y') : __('public.promotions.immediate') }}

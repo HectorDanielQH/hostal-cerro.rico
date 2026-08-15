@@ -48,7 +48,7 @@
     @stack('styles')
     @vite(['resources/css/public.css', 'resources/js/public.js'])
 </head>
-<body class="public-body {{ request()->routeIs('public.home') ? 'public-home' : 'public-inner' }} {{ request()->routeIs('public.booking.*') ? 'public-booking-page' : '' }}" style="{{ $themeCssVariables }}">
+<body class="public-body {{ request()->routeIs('public.home') ? 'public-home' : 'public-inner' }} {{ request()->routeIs('public.booking.*') ? 'public-booking-page' : '' }}" style="{{ $themeCssVariables }}" data-public-currency-root data-default-currency="{{ $hotelSetting->baseCurrency() }}" data-local-country="{{ $hotelSetting->country ?: 'Bolivia' }}">
     <div class="public-topbar">
         <div class="container public-topbar-inner">
             <div class="topbar-copy">

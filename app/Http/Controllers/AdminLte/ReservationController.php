@@ -44,22 +44,22 @@ class ReservationController extends Controller
         ],
         Reservation::STATUS_CONFIRMED => [
             'label' => 'Confirmada',
-            'badge' => 'badge text-bg-primary',
+            'badge' => 'badge text-bg-success',
             'icon' => 'bi-shield-check',
         ],
         Reservation::STATUS_CHECKED_IN => [
-            'label' => 'Check-in realizado',
-            'badge' => 'badge text-bg-success',
+            'label' => 'Ocupada',
+            'badge' => 'badge text-bg-danger',
             'icon' => 'bi-box-arrow-in-right',
         ],
         Reservation::STATUS_CHECKED_OUT => [
-            'label' => 'Check-out realizado',
+            'label' => 'Salida registrada',
             'badge' => 'badge text-bg-secondary',
             'icon' => 'bi-box-arrow-right',
         ],
         Reservation::STATUS_CANCELLED => [
             'label' => 'Cancelada',
-            'badge' => 'badge text-bg-danger',
+            'badge' => 'badge text-bg-secondary',
             'icon' => 'bi-x-circle',
         ],
         Reservation::STATUS_EXPIRED => [
@@ -287,17 +287,24 @@ class ReservationController extends Controller
         $page = max((int) $request->query('page', 1), 1);
         $perPage = 12;
 
+        if (mb_strlen($term) < 3) {
+            return response()->json([
+                'results' => [],
+                'pagination' => [
+                    'more' => false,
+                ],
+            ]);
+        }
+
         $customers = Customer::query()
             ->where('is_active', true)
-            ->when($term !== '', function ($query) use ($term): void {
-                $query->where(function ($searchQuery) use ($term): void {
-                    $searchQuery
-                        ->where('full_name', 'like', "%{$term}%")
-                        ->orWhere('document_number', 'like', "%{$term}%")
-                        ->orWhere('phone', 'like', "%{$term}%")
-                        ->orWhere('whatsapp', 'like', "%{$term}%")
-                        ->orWhere('email', 'like', "%{$term}%");
-                });
+            ->where(function ($searchQuery) use ($term): void {
+                $searchQuery
+                    ->where('full_name', 'like', "%{$term}%")
+                    ->orWhere('document_number', 'like', "%{$term}%")
+                    ->orWhere('phone', 'like', "%{$term}%")
+                    ->orWhere('whatsapp', 'like', "%{$term}%")
+                    ->orWhere('email', 'like', "%{$term}%");
             })
             ->orderBy('full_name')
             ->paginate($perPage, ['id', 'full_name', 'document_type', 'document_number', 'phone', 'whatsapp', 'email'], 'page', $page);
@@ -471,6 +478,7 @@ class ReservationController extends Controller
                 $confirmedMailSent ?? true
             ),
             'id' => $reservation->id,
+            'guest_update_url' => route('adminlte.front-desk.reservations.guests', $reservation),
         ]);
     }
 
@@ -667,7 +675,7 @@ class ReservationController extends Controller
 
         if (! $reservation->canCheckIn()) {
             return response()->json([
-                'message' => 'Solo se puede realizar check-in a reservas confirmadas.',
+                'message' => 'Solo se puede registrar entrada a reservas confirmadas.',
             ], 422);
         }
 
@@ -684,7 +692,7 @@ class ReservationController extends Controller
         });
 
         return response()->json([
-            'message' => 'Check-in realizado correctamente.',
+            'message' => 'Entrada registrada correctamente.',
         ]);
     }
 
@@ -694,7 +702,7 @@ class ReservationController extends Controller
 
         if (! $reservation->canCheckOut()) {
             return response()->json([
-                'message' => 'Solo se puede realizar check-out a reservas con check-in activo.',
+                'message' => 'Solo se puede registrar salida a reservas con entrada activa.',
             ], 422);
         }
 
@@ -706,7 +714,7 @@ class ReservationController extends Controller
 
         if ((float) $reservation->balance_amount > 0 && ! $forceCheckout) {
             return response()->json([
-                'message' => 'La reserva tiene saldo pendiente. Confirme si desea realizar check-out de todas formas.',
+                'message' => 'La reserva tiene saldo pendiente. Confirme si desea registrar la salida de todas formas.',
                 'requires_force_checkout' => true,
             ], 422);
         }
@@ -724,7 +732,7 @@ class ReservationController extends Controller
         });
 
         return response()->json([
-            'message' => 'Check-out realizado correctamente. La habitacion quedo disponible.',
+            'message' => 'Salida registrada correctamente. La habitacion quedo disponible.',
         ]);
     }
 
@@ -775,6 +783,7 @@ class ReservationController extends Controller
         $rooms = Room::query()
             ->with('roomType')
             ->where('is_active', true)
+            ->where('status', 'available')
             ->whereHas('roomType', fn ($query) => $query->where('max_guests', '>=', $guests))
             ->whereDoesntHave('reservations', function ($query) use ($checkIn, $checkOut): void {
                 $query->whereIn('status', Reservation::ACTIVE_STATUSES)

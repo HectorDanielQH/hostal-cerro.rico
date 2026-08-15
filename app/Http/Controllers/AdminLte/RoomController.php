@@ -10,6 +10,7 @@ use App\Models\RoomType;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Yajra\DataTables\Facades\DataTables;
 
@@ -19,6 +20,8 @@ class RoomController extends Controller
         'available' => ['label' => 'Disponible', 'badge' => 'badge text-bg-success', 'icon' => 'bi-check2-circle'],
         'occupied' => ['label' => 'Ocupada', 'badge' => 'badge text-bg-danger', 'icon' => 'bi-person-check'],
         'reserved' => ['label' => 'Reservada', 'badge' => 'badge text-bg-warning', 'icon' => 'bi-calendar2-check'],
+        'cleaning' => ['label' => 'En limpieza', 'badge' => 'badge text-bg-info', 'icon' => 'bi-stars'],
+        'maintenance' => ['label' => 'En reparacion', 'badge' => 'badge text-bg-dark', 'icon' => 'bi-tools'],
     ];
 
     public function index(): View
@@ -64,6 +67,11 @@ class RoomController extends Controller
             ->addColumn('status_label', fn (Room $room): string => self::STATUSES[$room->status]['label'] ?? ucfirst($room->status))
             ->addColumn('status_badge_class', fn (Room $room): string => self::STATUSES[$room->status]['badge'] ?? 'badge text-bg-secondary')
             ->addColumn('status_icon', fn (Room $room): string => self::STATUSES[$room->status]['icon'] ?? 'bi-door-open')
+            ->addColumn('gallery_images_count', fn (Room $room): int => count($room->gallery_images ?? []))
+            ->addColumn('gallery_image_urls', fn (Room $room): array => collect($room->publicGalleryImages())
+                ->map(fn (string $image): string => asset('storage/'.$image))
+                ->values()
+                ->all())
             ->addColumn('active_label', fn (Room $room): string => $room->is_active ? 'Activo' : 'Inactivo')
             ->addColumn('room_type_name', fn (Room $room): string => $room->roomType?->name ?? '-')
             ->addColumn('room_type_price', fn (Room $room): float => (float) ($room->roomType?->priceBob() ?? 0))
@@ -96,6 +104,7 @@ class RoomController extends Controller
             'floor' => $validated['floor'] ?? null,
             'description' => $validated['description'] ?? null,
             'internal_notes' => $validated['internal_notes'] ?? null,
+            'gallery_images' => $this->storeGalleryImages($request),
             'status' => $validated['status'],
             'is_active' => (bool) ($validated['is_active'] ?? false),
         ]);
@@ -110,6 +119,7 @@ class RoomController extends Controller
         $this->authorize('update', $room);
 
         $validated = $request->validated();
+        $galleryImages = $this->storeGalleryImages($request, $room);
 
         $room->update([
             'room_type_id' => $validated['room_type_id'],
@@ -117,6 +127,7 @@ class RoomController extends Controller
             'floor' => $validated['floor'] ?? null,
             'description' => $validated['description'] ?? null,
             'internal_notes' => $validated['internal_notes'] ?? null,
+            'gallery_images' => $galleryImages,
             'status' => $validated['status'],
             'is_active' => (bool) ($validated['is_active'] ?? false),
         ]);
@@ -130,6 +141,7 @@ class RoomController extends Controller
     {
         $this->authorize('delete', $room);
 
+        $this->deleteGalleryImages($room->gallery_images ?? []);
         $room->delete();
 
         return response()->json([
@@ -154,5 +166,46 @@ class RoomController extends Controller
         return response()->json([
             'message' => 'Estado de habitacion actualizado correctamente.',
         ]);
+    }
+
+    private function storeGalleryImages(StoreRoomRequest|UpdateRoomRequest $request, ?Room $room = null): array
+    {
+        $existingImages = collect($room?->gallery_images ?? [])
+            ->filter(fn ($image): bool => is_string($image) && trim($image) !== '')
+            ->values()
+            ->all();
+
+        $shouldClear = (bool) $request->boolean('clear_gallery_images');
+
+        if (! $request->hasFile('gallery_images')) {
+            if ($shouldClear) {
+                $this->deleteGalleryImages($existingImages);
+
+                return [];
+            }
+
+            return $existingImages;
+        }
+
+        $this->deleteGalleryImages($existingImages);
+
+        $stored = [];
+
+        foreach (array_slice($request->file('gallery_images', []), 0, 8) as $image) {
+            $stored[] = $image->store('rooms/gallery', 'public');
+        }
+
+        return $stored;
+    }
+
+    private function deleteGalleryImages(array $images): void
+    {
+        collect($images)
+            ->filter(fn ($image): bool => is_string($image) && trim($image) !== '')
+            ->each(function (string $image): void {
+                if (Storage::disk('public')->exists($image)) {
+                    Storage::disk('public')->delete($image);
+                }
+            });
     }
 }
