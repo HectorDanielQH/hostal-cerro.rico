@@ -5,6 +5,7 @@ namespace App\Services\Reception;
 use App\Models\Reservation;
 use App\Models\Room;
 use App\Services\HotelOperations\ReservationLedgerService;
+use App\Support\DatabaseDialect;
 use Illuminate\Support\Carbon;
 
 class DailyLedgerService
@@ -26,7 +27,7 @@ class DailyLedgerService
                     ->orderByDesc('check_in'),
             ])
             ->where('is_active', true)
-            ->orderByRaw('CAST(number AS UNSIGNED), number')
+            ->orderByRaw(DatabaseDialect::naturalRoomOrderExpression())
             ->get();
 
         $rows = $rooms->map(function (Room $room) use ($date): array {
@@ -516,7 +517,7 @@ class DailyLedgerService
         return \App\Models\Payment::query()
             ->with(['reservation.customer'])
             ->whereIn('reservation_id', $reservationIds)
-            ->orderByRaw("FIELD(status, 'pending', 'rejected', 'confirmed', 'cancelled', 'refunded')")
+            ->orderByRaw(DatabaseDialect::orderByListExpression('status', ['pending', 'rejected', 'confirmed', 'cancelled', 'refunded']))
             ->orderByDesc('created_at')
             ->get()
             ->map(fn (\App\Models\Payment $payment): array => [

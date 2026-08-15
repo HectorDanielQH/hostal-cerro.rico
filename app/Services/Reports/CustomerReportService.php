@@ -4,6 +4,7 @@ namespace App\Services\Reports;
 
 use App\Models\Customer;
 use App\Models\Payment;
+use App\Support\DatabaseDialect;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -26,7 +27,7 @@ class CustomerReportService
             ])
             ->when(
                 filled($nationality),
-                fn ($builder) => $builder->where('nationality', 'like', '%'.$nationality.'%')
+                fn ($builder) => $builder->where('nationality', DatabaseDialect::caseInsensitiveLikeOperator(), '%'.$nationality.'%')
             )
             ->when(
                 $isCompany !== null && $isCompany !== '',

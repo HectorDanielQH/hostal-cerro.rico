@@ -31,7 +31,7 @@
         @endif
 
         <div class="row g-3 mb-4">
-            <div class="col-md-6 col-xl-3">
+            <div class="col-md-6 col-xl">
                 <div class="hosting-status-card">
                     <i class="bi bi-globe2"></i>
                     <span>URL del sistema</span>
@@ -39,7 +39,7 @@
                     <small>APP_URL del archivo .env</small>
                 </div>
             </div>
-            <div class="col-md-6 col-xl-3">
+            <div class="col-md-6 col-xl">
                 <div class="hosting-status-card">
                     <i class="bi bi-server"></i>
                     <span>Ambiente</span>
@@ -47,7 +47,7 @@
                     <small>Debug: {{ $status['debug'] }}</small>
                 </div>
             </div>
-            <div class="col-md-6 col-xl-3">
+            <div class="col-md-6 col-xl">
                 <div class="hosting-status-card">
                     <i class="bi bi-code-slash"></i>
                     <span>PHP</span>
@@ -55,7 +55,15 @@
                     <small>Version detectada por Laravel</small>
                 </div>
             </div>
-            <div class="col-md-6 col-xl-3">
+            <div class="col-md-6 col-xl">
+                <div class="hosting-status-card {{ $status['pdo_pgsql'] ? 'is-ok' : 'is-warning' }}">
+                    <i class="bi bi-database"></i>
+                    <span>PostgreSQL</span>
+                    <strong>{{ $status['database_driver'] }} / {{ $status['database'] ?: 'Sin detectar' }}</strong>
+                    <small>{{ $status['pdo_pgsql'] ? 'Extension pdo_pgsql activa' : 'Activa pdo_pgsql en Select PHP Version' }}</small>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl">
                 <div class="hosting-status-card {{ $status['storage_exists'] ? 'is-ok' : 'is-warning' }}">
                     <i class="bi bi-folder-symlink"></i>
                     <span>Imagenes publicas</span>
@@ -114,7 +122,7 @@
                 </div>
                 <div class="col-lg-6">
                     <label>Base de datos configurada</label>
-                    <code>{{ $status['database'] ?: 'Sin detectar' }}</code>
+                    <code>{{ $status['database_driver'] }} / {{ $status['database'] ?: 'Sin detectar' }}</code>
                 </div>
                 <div class="col-lg-6">
                     <label>Estado del enlace</label>

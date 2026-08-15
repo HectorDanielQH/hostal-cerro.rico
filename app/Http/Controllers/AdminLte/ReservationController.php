@@ -19,6 +19,7 @@ use App\Services\Mail\ReservationMailService;
 use App\Services\Notifications\ReservationNotificationService;
 use App\Services\HotelOperations\ReservationLedgerService;
 use App\Services\Reservations\ReservationExpirationService;
+use App\Support\DatabaseDialect;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -298,14 +299,13 @@ class ReservationController extends Controller
 
         $customers = Customer::query()
             ->where('is_active', true)
-            ->where(function ($searchQuery) use ($term): void {
-                $searchQuery
-                    ->where('full_name', 'like', "%{$term}%")
-                    ->orWhere('document_number', 'like', "%{$term}%")
-                    ->orWhere('phone', 'like', "%{$term}%")
-                    ->orWhere('whatsapp', 'like', "%{$term}%")
-                    ->orWhere('email', 'like', "%{$term}%");
-            })
+            ->where(fn ($searchQuery) => DatabaseDialect::whereAnyLike($searchQuery, [
+                'full_name',
+                'document_number',
+                'phone',
+                'whatsapp',
+                'email',
+            ], $term))
             ->orderBy('full_name')
             ->paginate($perPage, ['id', 'full_name', 'document_type', 'document_number', 'phone', 'whatsapp', 'email'], 'page', $page);
 

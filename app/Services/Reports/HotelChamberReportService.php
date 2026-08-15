@@ -6,6 +6,7 @@ use App\Models\HotelSetting;
 use App\Models\Reservation;
 use App\Models\ReservationGuest;
 use App\Models\Room;
+use App\Support\DatabaseDialect;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -32,7 +33,7 @@ class HotelChamberReportService
             ->when(
                 filled($filters['nationality'] ?? null),
                 fn ($builder) => $builder->whereHas('customer', fn ($customerQuery) => $customerQuery
-                    ->where('nationality', 'like', '%'.$filters['nationality'].'%'))
+                    ->where('nationality', DatabaseDialect::caseInsensitiveLikeOperator(), '%'.$filters['nationality'].'%'))
             )
             ->orderBy('check_in')
             ->orderBy('check_out')

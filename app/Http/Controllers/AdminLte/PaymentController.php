@@ -16,6 +16,7 @@ use App\Services\HotelOperations\ReservationLedgerService;
 use App\Services\Mail\PaymentMailService;
 use App\Services\Mail\ReservationMailService;
 use App\Services\Reservations\ReservationExpirationService;
+use App\Support\DatabaseDialect;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -227,14 +228,15 @@ class PaymentController extends Controller
             ->when($term !== '', function ($query) use ($term): void {
                 $query->where(function ($searchQuery) use ($term): void {
                     $searchQuery
-                        ->where('code', 'like', "%{$term}%")
+                        ->where('code', DatabaseDialect::caseInsensitiveLikeOperator(), "%{$term}%")
                         ->orWhereHas('customer', function ($customerQuery) use ($term): void {
-                            $customerQuery
-                                ->where('full_name', 'like', "%{$term}%")
-                                ->orWhere('document_number', 'like', "%{$term}%")
-                                ->orWhere('phone', 'like', "%{$term}%")
-                                ->orWhere('whatsapp', 'like', "%{$term}%")
-                                ->orWhere('email', 'like', "%{$term}%");
+                            DatabaseDialect::whereAnyLike($customerQuery, [
+                                'full_name',
+                                'document_number',
+                                'phone',
+                                'whatsapp',
+                                'email',
+                            ], $term);
                         });
                 });
             })
