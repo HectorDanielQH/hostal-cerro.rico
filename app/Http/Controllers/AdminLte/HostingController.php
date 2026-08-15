@@ -26,6 +26,7 @@ class HostingController extends Controller
                 'pdo_pgsql' => extension_loaded('pdo_pgsql'),
                 'pgsql' => extension_loaded('pgsql'),
                 'storage_path' => storage_path('app/public'),
+                'public_disk_root' => config('filesystems.disks.public.root'),
                 'public_storage_path' => public_path('storage'),
                 'storage_exists' => File::exists(public_path('storage')),
                 'storage_is_link' => is_link(public_path('storage')),

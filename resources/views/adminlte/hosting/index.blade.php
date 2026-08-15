@@ -114,7 +114,7 @@
             <div class="row g-3">
                 <div class="col-lg-6">
                     <label>Origen de archivos publicos</label>
-                    <code>{{ $status['storage_path'] }}</code>
+                    <code>{{ $status['public_disk_root'] }}</code>
                 </div>
                 <div class="col-lg-6">
                     <label>Destino visible en navegador</label>
