@@ -153,21 +153,21 @@
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                         @php($logoStatus = $mediaStatus($hotelSetting->logo))
-                        <div class="media-config-card mt-2" data-media-card>
+                        <div class="media-config-card mt-2" data-media-card data-media-shape="circle">
                             <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
                                 <strong>Logo actual</strong>
                                 <span class="badge rounded-pill {{ $logoStatus['class'] }}" data-media-status>{{ $logoStatus['label'] }}</span>
                             </div>
-                            <div class="media-preview text-center">
+                            <div class="media-preview media-preview--circle text-center">
                                 @if ($imagePreview($hotelSetting->logo))
-                                    <img src="{{ $imagePreview($hotelSetting->logo) }}" alt="Logo actual" class="img-fluid rounded" style="max-height: 120px;" data-preview-image>
+                                    <img src="{{ $imagePreview($hotelSetting->logo) }}" alt="Logo actual" data-preview-image>
                                 @else
                                     <span class="text-muted" data-preview-empty>Sin imagen cargada</span>
                                 @endif
                             </div>
                             <input type="hidden" name="clear_logo" value="0" data-clear-input>
                             <div class="d-flex justify-content-between align-items-center gap-2 mt-3">
-                                <small class="text-muted">Se usa en la web publica y en identidad del hotel.</small>
+                                <small class="text-muted">Sugerencia: usa una imagen circular o centrada, ideal 512x512 px en PNG/WebP.</small>
                                 <button type="button" class="btn btn-outline-danger btn-sm" data-clear-trigger @disabled(blank($hotelSetting->logo))>Quitar</button>
                             </div>
                         </div>
@@ -179,21 +179,21 @@
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                         @php($faviconStatus = $mediaStatus($hotelSetting->favicon))
-                        <div class="media-config-card mt-2" data-media-card>
+                        <div class="media-config-card mt-2" data-media-card data-media-shape="circle">
                             <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
                                 <strong>Favicon actual</strong>
                                 <span class="badge rounded-pill {{ $faviconStatus['class'] }}" data-media-status>{{ $faviconStatus['label'] }}</span>
                             </div>
-                            <div class="media-preview text-center">
+                            <div class="media-preview media-preview--circle media-preview--favicon text-center">
                                 @if ($imagePreview($hotelSetting->favicon))
-                                    <img src="{{ $imagePreview($hotelSetting->favicon) }}" alt="Favicon actual" class="img-fluid rounded" style="max-height: 120px;" data-preview-image>
+                                    <img src="{{ $imagePreview($hotelSetting->favicon) }}" alt="Favicon actual" data-preview-image>
                                 @else
                                     <span class="text-muted" data-preview-empty>Sin imagen cargada</span>
                                 @endif
                             </div>
                             <input type="hidden" name="clear_favicon" value="0" data-clear-input>
                             <div class="d-flex justify-content-between align-items-center gap-2 mt-3">
-                                <small class="text-muted">Es el icono que se ve en la pestana del navegador.</small>
+                                <small class="text-muted">Sugerencia: icono circular o cuadrado centrado, ideal 512x512 px.</small>
                                 <button type="button" class="btn btn-outline-danger btn-sm" data-clear-trigger @disabled(blank($hotelSetting->favicon))>Quitar</button>
                             </div>
                         </div>
@@ -1311,6 +1311,7 @@
                 const previewVideo = card.querySelector('[data-preview-video]');
                 const previewEmbed = card.querySelector('[data-preview-embed]');
                 const previewEmpty = card.querySelector('[data-preview-empty]');
+                const previewBox = card.querySelector('.media-preview');
 
                 if (!clearTrigger || !clearInput || !status || !fileInput) {
                     return;
@@ -1358,6 +1359,19 @@
 
                     if (fileInput.files && fileInput.files.length > 0) {
                         resetRemoval();
+
+                        if (fileInput.files[0]?.type?.startsWith('image/') && previewBox) {
+                            previewImage?.remove();
+                            previewEmpty?.remove();
+
+                            const image = document.createElement('img');
+                            image.src = URL.createObjectURL(fileInput.files[0]);
+                            image.alt = 'Nueva imagen seleccionada';
+                            image.setAttribute('data-preview-image', '');
+                            image.addEventListener('load', () => URL.revokeObjectURL(image.src), { once: true });
+
+                            previewBox.appendChild(image);
+                        }
                     }
                 });
             });
@@ -2077,6 +2091,43 @@
         .media-preview img,
         .media-preview video {
             box-shadow: 0 12px 28px rgba(15, 23, 42, .14);
+        }
+
+        .media-preview--circle {
+            width: 156px;
+            height: 156px;
+            min-height: 156px;
+            margin-inline: auto;
+            border-radius: 50%;
+            padding: .45rem;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 30% 20%, rgba(214, 162, 61, .18), transparent 42%),
+                linear-gradient(135deg, rgba(44, 20, 88, .08), rgba(255, 255, 255, .95));
+            box-shadow:
+                inset 0 0 0 1px rgba(15, 23, 42, .06),
+                0 18px 36px rgba(15, 23, 42, .12);
+        }
+
+        .media-preview--circle img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            object-position: center;
+        }
+
+        .media-preview--favicon {
+            width: 128px;
+            height: 128px;
+            min-height: 128px;
+        }
+
+        .media-preview--circle [data-preview-empty] {
+            max-width: 92px;
+            font-size: .78rem;
+            font-weight: 800;
+            line-height: 1.25;
         }
 
         @media (max-width: 991.98px) {
